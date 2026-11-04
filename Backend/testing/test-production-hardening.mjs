@@ -45,6 +45,17 @@ test("runtime config validates ports and production security-critical settings",
         NODE_ENV: "production",
         PORT: "5000",
         MONGO_URL: "mongodb://localhost:27017/store",
+        JWT_ACCESS_SECRET: "short",
+        FRONTEND_URL: "https://store.example",
+      }),
+    /JWT_ACCESS_SECRET must contain at least 32 bytes/
+  );
+  assert.throws(
+    () =>
+      validateRuntimeConfig({
+        NODE_ENV: "production",
+        PORT: "5000",
+        MONGO_URL: "mongodb://localhost:27017/store",
         JWT_ACCESS_SECRET: "a".repeat(32),
         FRONTEND_URL: "not-a-url",
       }),

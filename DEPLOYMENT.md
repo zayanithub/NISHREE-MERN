@@ -10,7 +10,7 @@ In the Render dashboard, open the existing Nishree backend web service and confi
 | --- | --- |
 | Branch | `main` |
 | Root Directory | `Backend` |
-| Build Command | `npm install` |
+| Build Command | `npm ci` |
 | Start Command | `npm start` |
 | Health Check Path | `/api/health` |
 
@@ -21,7 +21,7 @@ Set or verify these environment variables in the Render service. Enter secrets d
 | `NODE_ENV` | `production` |
 | `FRONTEND_URL` | `https://nishree.in` (origin only; no trailing slash) |
 | `MONGO_URL` | Existing production MongoDB URI; do not replace the database |
-| `JWT_ACCESS_SECRET` | Existing strong secret, at least 32 bytes. Rotating it signs out active users. |
+| `JWT_ACCESS_SECRET` | A private random secret, at least 32 bytes. Rotating it signs out active users. |
 | `COOKIE_SAME_SITE` | `lax` |
 | `SMTP_HOST` | Your configured SMTP host (for Gmail, `smtp.gmail.com`) |
 | `SMTP_PORT` | `465` for implicit TLS, or the port specified by your SMTP provider |
@@ -37,6 +37,20 @@ Set or verify these environment variables in the Render service. Enter secrets d
 | `RAZORPAY_WEBHOOK_SECRET` | The same webhook signing secret configured in Razorpay |
 
 Keep the existing production values for credentials and optional notification providers. Do not copy example or test values over working production settings. Render supplies `PORT`; do not hardcode a different port.
+
+### Fix `JWT_ACCESS_SECRET must contain at least 32 bytes`
+
+This is a Render environment-variable issue, not a database migration or frontend setting. Generate a fresh value locally in PowerShell; the command prints a 48-byte random value:
+
+```powershell
+node -p "require('node:crypto').randomBytes(48).toString('base64url')"
+```
+
+In the Render service, open **Environment**, set `JWT_ACCESS_SECRET` to that value exactly (no quotes or spaces), save, and let Render redeploy. Do not post the generated value in chat, commit it, or add it to Vercel. Changing the signing secret invalidates existing access tokens, so users and admins may need to sign in again. Verify the deploy logs no longer contain the startup validation error and `/api/health` returns 200 with the database connected.
+
+### Fix npm's `Unknown env config "cache-dir"` warning
+
+The repository has no `.npmrc` setting this option, so check the Render service's **Environment** for `NPM_CONFIG_CACHE_DIR` or `npm_config_cache_dir` and remove it. npm's supported setting is `cache`, not `cache-dir`; Render already manages its build cache. Save and redeploy. This warning is separate from the backend crash and does not itself prevent `npm ci` from succeeding.
 
 After changing environment variables, save them and wait for the Render deploy to finish. Check the service logs for startup/database/email errors, then confirm:
 
