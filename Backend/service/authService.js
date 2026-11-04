@@ -96,7 +96,13 @@ const createOtpChallenge = async ({ user = null, email, purpose }) => {
         { _id: challengeId, consumedAt: null },
         { $set: { revokedAt: new Date() } }
       );
-      throw error;
+      const deliveryError = createError(
+        "Verification code email could not be sent. Please try again later.",
+        503
+      );
+      deliveryError.code = "OTP_EMAIL_DELIVERY_FAILED";
+      deliveryError.cause = error;
+      throw deliveryError;
     }
   }
 

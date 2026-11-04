@@ -2,6 +2,8 @@
 
 This Vite application is the customer storefront for the existing Nishree Attire Express API. The UI uses the local saree and atelier images in `src/assets`; production product data, cart pricing, coupons, customer accounts and order states come from the backend.
 
+For production Vercel and Render configuration, verification and rollback, see the [deployment guide](../DEPLOYMENT.md).
+
 ## Run locally
 
 From `Frontend`, run:

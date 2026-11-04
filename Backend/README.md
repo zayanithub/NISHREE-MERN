@@ -2,6 +2,8 @@
 
 The API is the existing Express, Mongoose and MongoDB backend for the Vite storefront. Run these commands from `Backend`.
 
+For production Render and Vercel configuration, OTP email troubleshooting, verification and rollback, see the [deployment guide](../DEPLOYMENT.md).
+
 ## Local development
 
 ```powershell

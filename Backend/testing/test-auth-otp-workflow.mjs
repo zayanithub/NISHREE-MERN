@@ -67,6 +67,7 @@ test("customer login requires email OTP before issuing a session and supports pa
   let storedOtp;
   let resetRecord;
   let sentMessage;
+  let smtpUnavailable = false;
   let transportOptions;
   const refreshRecords = [];
 
@@ -82,6 +83,10 @@ test("customer login requires email OTP before issuing a session and supports pa
   t.mock.method(OTPVerification, "create", async (record) => {
     storedOtp = { ...record, attempts: 0 };
     return storedOtp;
+  });
+  t.mock.method(OTPVerification, "updateOne", async (_filter, update) => {
+    Object.assign(storedOtp, update.$set);
+    return { modifiedCount: 1 };
   });
   t.mock.method(OTPVerification, "findOne", () => query(storedOtp));
   t.mock.method(OTPVerification, "findOneAndUpdate", async (_filter, update) => {
@@ -108,6 +113,12 @@ test("customer login requires email OTP before issuing a session and supports pa
     return {
       verify: async () => true,
       sendMail: async (message) => {
+        if (smtpUnavailable) {
+          throw Object.assign(new Error("SMTP authentication failed"), {
+            code: "EAUTH",
+            responseCode: 535,
+          });
+        }
         sentMessage = message;
         return { messageId: "auth-email-1" };
       },
@@ -155,6 +166,17 @@ test("customer login requires email OTP before issuing a session and supports pa
   );
   assert.equal(user.passwordHash, "hashed:new-password-123");
   assert.ok(resetRecord.usedAt instanceof Date);
+
+  smtpUnavailable = true;
+  await assert.rejects(
+    loginUser({ email: user.email, password: "correct-password" }),
+    {
+      statusCode: 503,
+      code: "OTP_EMAIL_DELIVERY_FAILED",
+      message: "Verification code email could not be sent. Please try again later.",
+    }
+  );
+  assert.ok(storedOtp.revokedAt instanceof Date);
 });
 
 test("rejects malformed, expired, and incorrect OTP challenges", async (t) => {
