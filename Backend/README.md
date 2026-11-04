@@ -10,7 +10,7 @@ npm.cmd run dev
 
 Copy `.env.example` to `.env` and set `MONGO_URL`, `JWT_ACCESS_SECRET`, and the SMTP credentials in the backend environment. Customer sign-in, email verification, password recovery, and transactional notifications are sent through Nodemailer. For Gmail, use an app password and `SMTP_HOST=smtp.gmail.com`, `SMTP_PORT=465`, and `SMTP_SECURE=true`; `MAIL_FROM` is optional and defaults to `SMTP_USER`. `MAIL_LOGO_URL` can point to a public Nishree logo for branded email headers, and `SUPPORT_EMAIL` is shown in the template footer when configured. Production startup validates that the SMTP settings are present and well-formed. The API binds after connecting to MongoDB, then verifies SMTP in the background with bounded connection timeouts; an SMTP outage is reported but does not prevent the API from starting. Email-sending operations still return/log their delivery failures through the existing error-handling flow.
 
-Never put database, JWT, or provider credentials in a `VITE_` variable.
+Never put database, JWT, or provider credentials in a `VITE_` variable. Production frontend builds use a same-origin Vercel rewrite from `/api/*` to the Render API so browser refresh and guest-cart cookies remain first-party; set `FRONTEND_URL=https://nishree.in` for CORS. Local development uses `FRONTEND_URL=http://localhost:5173`.
 
 Customer registration and sign-in return an email OTP challenge and do not create an authenticated session until the code is verified. Password recovery uses a separate OTP followed by a one-time, expiring password-reset token. OTPs expire after 10 minutes, allow at most five attempts, and are stored as keyed hashes.
 
