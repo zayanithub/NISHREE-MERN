@@ -1,0 +1,23 @@
+@import "tailwindcss";
+
+:root {
+  font-family: "DM Sans", "Avenir Next", Avenir, "Segoe UI", sans-serif;
+  color: #302623;
+  background: #faf8f3;
+  font-synthesis: none;
+  text-rendering: optimizeLegibility;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  font-optical-sizing: auto;
+  font-weight: 400;
+}
+
+* { box-sizing: border-box; }
+html { min-width: 320px; scroll-behavior: smooth; scroll-padding-top: 128px; }
+body { margin: 0; min-height: 100vh; }
+button, input, select, textarea { font: inherit; }
+button, a { -webkit-tap-highlight-color: transparent; touch-action: manipulation; }
+img { display: block; max-width: 100%; }
+a { color: inherit; text-decoration: none; }
+::selection { color: #fffaf2; background: #672033; }
+:focus-visible { outline: 2px solid #a8854d; outline-offset: 3px; }

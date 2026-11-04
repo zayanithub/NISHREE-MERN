@@ -1,0 +1,58 @@
+# Verified API integration map
+
+The route paths below are derived from `Backend/app.js` and the route/controller/service implementations. The browser client defaults to `/api/v1`, sends `withCredentials`, and attaches only the in-memory customer access token. Local Vite development proxies `/api` to port `5000`.
+
+## Customer-facing routes
+
+| Backend endpoint | Access and request | Response consumed | Storefront use |
+| --- | --- | --- | --- |
+| `GET /products` | Public. `page`, `limit` (max 100), `search`, `category` (slug or ID), `material`, `minPrice`, `maxPrice`, `isFeatured`, `tags`, `sort`. Sort values: `newest`, `oldest`, `name-asc`, `name-desc`, `featured`. | `{ success, products, pagination }`; listing products include category, primary image, and review summary. | Home sections; `/shop` and collection listings use real data, pagination and supported filters. |
+| `GET /products/:slug` | Public. Product slug. | `{ success, product }`; includes active category, `images`, active `variants` with final prices, and review summary. No live stock count is returned. | Product detail. A variant is required when active variants are present. |
+| `GET /products/:slug/reviews` | Public. `page`, `limit`, `rating`, `sort` (`newest`, `oldest`, `highest`, `lowest`). | `{ success, data: { product, reviews, pagination, summary } }`; only approved reviews are returned. | Product ratings and review list. |
+| `GET /categories`, `GET /categories/:slug` | Public. List supports `page`, `limit`, `search`, `parentCategory`, `isFeatured`; public results contain active categories. | List `{ success, categories, pagination }`; detail `{ success, category }`. | Navigation and homepage collection cards. |
+| `POST /auth/register`, `POST /auth/login` | Public. Register `{ name, email, phone?, password }`; login `{ email, password }`. Backend applies Zod validation. | `{ success, user, accessToken }`; backend sets an HTTP-only `nishree_refresh` cookie. | Registration and sign-in. Access tokens stay in memory. |
+| `POST /auth/refresh`, `POST /auth/logout`, `GET /auth/me` | Refresh/logout use the HTTP-only cookie; `/me` requires `Authorization: Bearer <accessToken>`. | Refresh `{ success, user, accessToken }`; logout `{ success, message }`; `/me` `{ success, user }`. | Session restore, refresh and sign-out. OTP, email verification and password reset are not mounted. |
+| `GET /cart`, `POST /cart/items`, `PATCH /cart/items/:itemId`, `DELETE /cart/items/:itemId`, `DELETE /cart` | Optional customer bearer token. Guests use `nishree_guest_cart` HTTP-only cookie. Add `{ product, variant?, quantity? }`; quantity update `{ quantity }`. | `{ success, cart }`. Cart contains server prices, line totals, available quantity, `isAvailable`, `canCheckout` and totals. | Bag drawer/page. `withCredentials` preserves guest-cart cookies. |
+| `GET /wishlist`, `POST /wishlist/products`, `DELETE /wishlist/products/:productId`, `DELETE /wishlist` | Customer bearer token. Add body `{ productId }`. | `{ success, wishlist }`; customer response contains populated active products. | Saved-product controls and `/wishlist`. |
+| `/addresses` | Customer bearer token. `GET /`, `POST /`, `GET /:addressId`, `PATCH /:addressId`, `PATCH /:addressId/default`, `DELETE /:addressId`. Address fields follow the `Address` model and service normalization. | List `{ success, addresses, count }`; create/update/default `{ success, address }`; delete `{ success, ...result }`. | Checkout and account address management. Ownership is enforced by the service. |
+| `POST /coupons/validate` | Customer bearer token. Strict body `{ code }`; validates against the customer's server cart. | `{ success, data: { code, discountType, discountValue, subtotal, discountAmount, eligibleSubtotal, totalAmount } }`. | Coupon entry at checkout. Order placement revalidates it. No public promotion-list endpoint exists. |
+| `POST /orders` | Customer bearer token. Strict body: `shippingAddressId`, optional `billingAddressId`, `paymentMethod: "cod" | "razorpay"`, optional `couponCode`, optional `notes`. Prices/cart are read server-side. | `{ success, order }`; order stores address/item snapshots and authoritative totals/statuses. | Checkout and order creation. |
+| `GET /orders`, `GET /orders/:orderId`, `PATCH /orders/:orderId/cancel` | Customer bearer token. List accepts `page`, `limit` (max 100), `status`. | List `{ success, orders, pagination }`; detail/cancel `{ success, order }`. | Order history, status, and eligible cancellations. Customer ownership is enforced. |
+| `GET /orders/:orderId/shipment` | Customer bearer token; own order only. | `{ success, data: { order, shipment } }`; shipment can be `null`. | Tracking when a shipment record exists. |
+| `POST /payments/razorpay/order` | Customer bearer token. Header `Idempotency-Key`; body `{ orderId }`. Amount is loaded from saved order. | `{ success, payment, checkout: { keyId, orderId, amount, currency } }`. `keyId` is public; gateway secret remains backend-only. | Opens Razorpay using server-provided values. |
+| `POST /payments/razorpay/verify` | Customer bearer token. Body `paymentId`, `razorpay_order_id`, `razorpay_payment_id`, `razorpay_signature`. | `{ success, payment, order, alreadyVerified }`; service verifies signature and checks Razorpay. | Only show payment success when returned order is confirmed and payment is `authorized` or `paid`. Dismissal remains unconfirmed. |
+| `/returns` | Customer bearer token. `POST /` requires `orderId`, embedded `orderItemId`, `quantity`, reason (`damaged_product`, `wrong_product`, `different_from_description`, `quality_issue`, `size_or_fit`, `other`), optional `reasonDetails` and `evidenceImages`. `GET /` supports `page`, `limit`, `status`; detail and cancel use `/:returnRequestId`. | Create/detail/cancel `{ success, data: { returnRequest } }`; list `{ success, data: { requests, pagination } }`. | Return request form/history; eligibility and policy window are server-checked. |
+| `/exchanges` | Customer bearer token. `POST /` requires order/item IDs, `quantity`, `requestedProductId`, optional `requestedVariantId`, reason (`wrong_product`, `damaged_product`, `different_from_description`, `size_or_fit`, `color_change`, `other`), optional `reasonDetails`. List/detail/cancel mirror returns. | Create/detail/cancel `{ success, data: { exchangeRequest } }`; list `{ success, data: { requests, pagination } }`. | Exchange request form/history; replacement product/variant comes from catalog APIs; policy, order and stock checks remain server-side. |
+| `/reviews` | Customer bearer token. `GET /me`; `POST /products/:productId` requires `orderId`, integer rating 1–5, optional title/comment; `PATCH /me/:reviewId`; `DELETE /me/:reviewId`. | `{ success, data: { reviews, pagination } }` for `/me`; create/update return `{ success, data: { review } }` and submit for moderation. | Delivered-order review form on product pages and `/account/reviews` history. |
+| `/notifications` | Customer bearer token. List `GET /` supports `page`, `limit`, `type`, `isRead`; unread count, read-all and `/:notificationId/read`; `GET/PATCH /preferences`. | List `{ success, data: { notifications, pagination } }`; preferences `{ success, data: { preferences } }`; read `{ success, data: { notification } }`; count `{ data: { unreadCount } }`. | Account notification centre and channel preferences. Provider delivery still depends on backend configuration/consent. |
+
+## Admin, callbacks and server-only operations
+
+This storefront does not expose administrative operations. `POST /api/v1/admin/auth/login`, `/refresh`, `/logout`, and `GET /me` implement admin session lifecycle. Other `/api/v1/admin/*` routes require admin JWT plus per-resource RBAC.
+
+| Mounted route group | Operations and permission checks |
+| --- | --- |
+| `/admin/categories` | List/create/get/update/status/delete; `categories.read/create/update/delete`. |
+| `/admin/products` | List/create/get/update/status/delete; nested `/:productId/images` and `/:productId/variants`; `products.read/create/update/delete`. Image uploads use admin upload middleware. |
+| `/admin/inventory` | List/low-stock/product/variant lookup, create, quantity adjustment and threshold update; `inventory.read/create/update`. |
+| `/admin/orders`, `/admin/shipping` | Order list/detail/status; shipment create/list/detail/update/status; respective `orders.*` and `shipping.*`. |
+| `/admin/returns`, `/admin/exchanges`, `/admin/refunds` | Review/workflow and refund create/approve/process/list/detail; respective resource permissions. Refunds have no customer route. |
+| `/admin/reviews`, `/admin/coupons` | Review moderation and coupon CRUD/status; respective resource permissions. |
+| `/admin/notifications` | Admin notifications, templates, deliveries/retries and outbox/replay; `notifications.read/update`. |
+| `/admin/dashboard`, `/admin/audit-logs` | Overview/sales/inventory alerts and audit queries; `dashboard.read`, `audit_logs.read`. |
+| `/api/v1/payments/razorpay/webhook` | Public to the gateway, but protected by raw-body HMAC signature and event-ID idempotency. No customer/admin JWT. |
+| `/api/v1/notification-delivery-webhooks/{twilio,meta}` | Provider callbacks with provider signature/token verification. |
+
+## Verified limits and missing public APIs
+
+- There is no newsletter/contact-message endpoint, so no success-simulating form is shown.
+- OTP, email-verification and password-reset models exist, but customer routes do not expose those workflows.
+- There is no public shipping-rate/estimate or store-settings endpoint. Checkout does not invent those values; saved order amounts are shown from the server.
+- Product list filters support material and price but not colour. Sort does not include price ordering; UI uses only supported values.
+- Product detail exposes active variants but no live stock count; bag availability comes from the server cart.
+- Guest and customer carts are separate, and login does not merge them. After sign-in the UI loads the account cart; guest contents remain in the guest cart.
+- Refund actions are admin-only. Customers can see payment state on their order but cannot query a refund-specific endpoint.
+- Order placement requires a customer account and reads the account cart. The store's COD/Razorpay and return/exchange settings are not publicly readable, so backend responses are authoritative if an option is disabled.
+- Runtime configuration validates `COOKIE_SAME_SITE`, but customer/admin auth controllers currently set refresh cookies to `SameSite=Lax` directly. Use same-site hosts (for example, storefront/API subdomains of the same site); a fully cross-site deployment cannot rely on refresh cookies without a backend correction.
+
+Errors normally use `{ success: false, message }`; validation middleware can encode field issues as JSON inside `message`. The Axios client normalizes that response and does not expose stack traces. `Backend/app.js` configures Helmet, credentialed CORS, JSON size limits and API/admin-login rate limits.

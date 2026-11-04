@@ -1,0 +1,41 @@
+Backend Structures:
+
+PHASE 1 — Core / Infrastructure (✓)
+
+PHASE 2 — Customer Authentication (✓)
+        
+PHASE 3 — Admin Authentication + RBAC (✓)
+        
+PHASE 4 — Category Management (✓)
+        
+PHASE 5 — Product Management (✓)
+        
+PHASE 6 — Product Images + Cloudinary (✓)
+        
+PHASE 7 — Inventory Management (✓)
+        
+PHASE 8 — Cart + Wishlist (✓)
+        
+PHASE 9 — Address Management (✓)
+        
+PHASE 10 — Orders (✓)
+        
+PHASE 11 — Razorpay + Payments (✓)
+        
+PHASE 12 — Shipping (✓)
+        
+PHASE 13 — Returns + Exchanges + Refunds (✓: shared atomic return/exchange quantity reservations, replacement stock and price-difference settlement, Razorpay and COD refund workflows, admin refund listing, retry handling, and regression tests)
+        
+PHASE 14 — Reviews (✓: verified-purchase customer reviews, owner-scoped review management, approved-only public reviews and product summaries, admin moderation with RBAC, pagination/filtering, and regression tests)
+        
+PHASE 15 — Coupons (✓: admin coupon management with RBAC, cart validation, server-recalculated checkout discounts, product/category eligibility, global/per-user usage limits, transactional reservations and cancellation release, and regression tests)
+        
+PHASE 16 — Notifications (✓: customer inbox with pagination/type/read filters, unread count, mark-one/all-read and in-app preferences; RBAC-protected admin inbox scoped to the authenticated admin; idempotent notifications for order, payment/webhook, shipping, return, exchange and refund events; safe internal action paths and recipient isolation. Workflow writes are post-commit best-effort with explicit error logging; transactional outbox/replay guarantees remain for Phase 20. Provider delivery remains in Phase 17.)
+        
+PHASE 17 — Email / SMS / WhatsApp (✓: durable per-channel delivery queue, SMTP/Twilio/Meta WhatsApp adapters, consent and contact rechecks, approved-template validation, retries and uncertain-outcome protection, signed delivery/opt-out webhooks, RBAC-protected admin templates/logs/retries, integration tests. Live delivery still requires deployment credentials, provider-approved WhatsApp templates, customer consent, and public HTTPS webhooks.)
+        
+PHASE 18 — Admin Dashboard APIs (✓: admin-authenticated, `dashboard.read`-protected overview, sales analytics, and low-stock inventory alerts; UTC 7/30/90-day reporting, settled net sales/refunds, order/customer/product KPIs, status and payment-method breakdowns, top products, recent orders, actionable return/exchange/review counts, bounded stock alerts, input validation, and regression tests. Run `npm run seed:roles` after deployment to grant the new dashboard permission to `super_admin`.)
+        
+PHASE 19 — Audit Logs / Security (✓: sanitized admin mutation/denial and admin login/session audit events, paginated RBAC-protected audit-log API with filters and bounded date windows, secret-safe output projection, admin JWT subject validation, and admin-login rate limiting. Audit persistence is best-effort and logged without failing business requests; use a shared limiter store for multi-instance deployments. Run `npm run seed:roles` after deployment to grant `audit_logs.read` to `super_admin`.)
+        
+PHASE 20 — Testing + Production Hardening
