@@ -14,6 +14,11 @@ In the Render dashboard, open the existing Nishree backend web service and confi
 | Start Command | `npm start` |
 | Health Check Path | `/api/health` |
 
+The API trusts one proxy hop so Express and `express-rate-limit` can derive the
+client IP from Render's `X-Forwarded-For` header. Keep the service reachable
+through Render's proxy; do not increase this hop count without verifying the
+proxy chain, since trusting extra hops can allow clients to spoof their IP.
+
 Set or verify these environment variables in the Render service. Enter secrets directly in Render; never commit them or add them to Vercel.
 
 | Variable | Value / guidance |
