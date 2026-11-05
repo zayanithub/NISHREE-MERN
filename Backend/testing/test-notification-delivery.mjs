@@ -229,6 +229,23 @@ test("retries transient provider failures with bounded backoff", async (t) => {
   );
 });
 
+test("does not automatically retry SMTP timeouts after message transmission starts", () => {
+  const failure = notificationDeliveryInternals.getFailureState(
+    {
+      code: "ETIMEDOUT",
+      command: "DATA",
+      outcomeUnknown: true,
+    },
+    1
+  );
+  assert.deepEqual(failure, {
+    outcomeUnknown: true,
+    status: "uncertain",
+    lastErrorCode: "SMTP_OUTCOME_UNKNOWN",
+    nextAttemptAt: null,
+  });
+});
+
 test("does not retry permanent provider configuration errors", async (t) => {
   const previousSid = process.env.TWILIO_ACCOUNT_SID;
   const previousToken = process.env.TWILIO_AUTH_TOKEN;

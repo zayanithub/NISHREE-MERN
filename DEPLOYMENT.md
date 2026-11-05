@@ -34,6 +34,7 @@ Set or verify these environment variables in the Render service. Enter secrets d
 | `SMTP_USER` | Verified sender account |
 | `SMTP_PASS` | Valid SMTP credential/app password; do not use an account's normal password |
 | `MAIL_FROM` | Optional verified sender; defaults to `SMTP_USER` |
+| `SMTP_FROM` | Optional sender alias accepted when `MAIL_FROM` is unset; `MAIL_FROM` takes precedence |
 | `CLOUDINARY_CLOUD_NAME` | Cloudinary cloud name, required for persistent uploads |
 | `CLOUDINARY_API_KEY` | Cloudinary API key |
 | `CLOUDINARY_API_SECRET` | Cloudinary API secret |
@@ -70,6 +71,12 @@ It should return HTTP 200 and `"database":"Connected"`.
 Customer and administrator sign-in send a one-time email code after credentials are validated. If SMTP authentication or delivery fails, the login cannot complete even while MongoDB and `/api/health` are healthy. Check Render logs at the time of the attempt and confirm `SMTP_HOST`, `SMTP_PORT`, `SMTP_SECURE`, `SMTP_USER`, and `SMTP_PASS` are correct for the sender. A Gmail sender generally needs a Google app password with 2-step verification enabled. Never paste SMTP credentials into a support chat or browser-visible variable.
 
 The API returns HTTP 503 with a retryable message when the customer OTP email cannot be delivered; the failed OTP challenge is revoked. Invalid credentials should return 401, and malformed login input should return 400.
+
+### SMTP connectivity diagnostics
+
+An HTTP health check confirms the API and database, not SMTP delivery. In the Render service's shell or a staging instance with the same network policy, run `npm run smtp:diagnose` from `Backend` (the configured service root). It reports DNS, TCP, greeting, TLS, and Nodemailer verification/authentication independently without printing SMTP credentials or sending mail. A TCP timeout points to egress/firewall/provider reachability; `ENOTFOUND` points to DNS; TLS/certificate errors point to TLS settings or trust; `EAUTH` or an SMTP 535 response points to credentials/provider authorization. A local sandbox's network result does not establish Render's network behavior.
+
+Only send a real diagnostic message from staging, to a dedicated test inbox, after configuring `SMTP_DIAGNOSTIC_ENV=staging` and `SMTP_DIAGNOSTIC_TO`; run `npm run smtp:diagnose -- --send-test-email`. The script requires this explicit opt-in and reports SMTP relay acceptance, which does not guarantee inbox delivery. Check the recipient mailbox and provider logs separately. Never test with a customer address or production order.
 
 ## 2. Vercel storefront
 

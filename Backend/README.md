@@ -74,3 +74,9 @@ npm.cmd run test:webhook:local
 ```
 
 The local integration check uses `http://localhost:5000/api/v1/payments/razorpay/webhook` by default. Set `RAZORPAY_WEBHOOK_TEST_URL` to target another local test server.
+
+## SMTP diagnostics
+
+Run `npm run smtp:diagnose` from the backend directory in the runtime whose email delivery is failing. The command separately reports DNS, TCP connectivity, SMTP greeting, TLS, and Nodemailer verification/authentication, and never prints credentials or sends an email by default. To send a real test message, configure a dedicated staging inbox and explicitly set `SMTP_DIAGNOSTIC_ENV=staging` and `SMTP_DIAGNOSTIC_TO`, then run `npm run smtp:diagnose -- --send-test-email`. A successful SMTP relay acceptance is not proof that the message reached the inbox.
+
+SMTP uses `MAIL_FROM` when set, then accepts `SMTP_FROM` as an alias, and otherwise falls back to `SMTP_USER`. Port 465 should use `SMTP_SECURE=true`; port 587 should use `SMTP_SECURE=false` and provider-supported STARTTLS. Do not change host or TLS settings based only on an API health check; use the diagnostic stages and the SMTP provider's documented settings.

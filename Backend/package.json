@@ -11,6 +11,7 @@
     "seed:admin": "node seed/seedAdmin.js",
     "start": "node index.js",
     "dev": "nodemon index.js",
+    "smtp:diagnose": "node testing/diagnose-smtp.mjs",
     "test:webhook:local": "node testing/verify-webhook-local.mjs"
   },
   "keywords": [],

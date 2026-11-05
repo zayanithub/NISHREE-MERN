@@ -2,6 +2,92 @@ import nodemailer from "nodemailer";
 
 let transporter;
 
+const smtpErrorCategories = {
+  ETIMEDOUT: {
+    category: "timeout",
+    message:
+      "The SMTP operation timed out. Check SMTP DNS, host and port, outbound firewall rules, TLS mode, and provider availability.",
+  },
+  ECONNECTION: {
+    category: "connection",
+    message:
+      "The SMTP connection could not be established. Check outbound SMTP access and the configured host and port.",
+  },
+  ECONNREFUSED: {
+    category: "connection_refused",
+    message:
+      "The SMTP server refused the connection. Check the configured host, port, and provider availability.",
+  },
+  ECONNRESET: {
+    category: "connection_reset",
+    message:
+      "The SMTP connection was reset by the network or provider. Check outbound SMTP access and provider availability.",
+  },
+  EACCES: {
+    category: "egress_denied",
+    message:
+      "The runtime denied SMTP socket access. Check its outbound network policy; provider connectivity could not be established from this runtime.",
+  },
+  ENOTFOUND: {
+    category: "dns",
+    message:
+      "The SMTP hostname could not be resolved. Check SMTP_HOST and the runtime DNS configuration.",
+  },
+  EDNS: {
+    category: "dns",
+    message:
+      "SMTP hostname resolution failed. Check SMTP_HOST and the runtime DNS configuration.",
+  },
+  EAUTH: {
+    category: "authentication",
+    message:
+      "The SMTP provider rejected authentication. Verify SMTP_USER and the provider-issued SMTP credential.",
+  },
+  EPROTOCOL: {
+    category: "tls",
+    message:
+      "The SMTP TLS protocol negotiation failed. Check the provider's required TLS mode and port.",
+  },
+};
+
+const isTlsError = (code) =>
+  /^(?:ERR_TLS_|ERR_SSL_|CERT_|SELF_SIGNED_CERT|UNABLE_TO_VERIFY_LEAF_SIGNATURE)/i.test(
+    code
+  );
+
+export const getEmailTransportErrorDetails = (error) => {
+  const rawCode =
+    typeof error?.code === "string" && /^[A-Z0-9_]+$/i.test(error.code)
+      ? error.code
+      : "SMTP_VERIFY_FAILED";
+  const known = smtpErrorCategories[rawCode];
+  const tlsError =
+    isTlsError(rawCode) ||
+    (rawCode === "ESOCKET" &&
+      /tls|ssl|certificate/i.test(String(error?.message || "")));
+  const command =
+    typeof error?.command === "string" &&
+    /^(?:CONN|AUTH|MAIL FROM|RCPT TO|DATA|STARTTLS|EHLO|QUIT)(?:\s+[A-Z0-9_-]+)?$/i.test(
+      error.command
+    )
+      ? error.command
+      : undefined;
+
+  return {
+    code: rawCode,
+    category: known?.category || (tlsError ? "tls" : "smtp"),
+    message:
+      known?.message ||
+      (tlsError
+        ? "The SMTP TLS handshake or certificate validation failed. Check the provider's required TLS mode and certificate."
+        : "SMTP verification failed. Check the provider response and SMTP configuration."),
+    ...(Number.isInteger(error?.responseCode)
+      ? { responseCode: error.responseCode }
+      : {}),
+    ...(command ? { command } : {}),
+  };
+};
+
 const escapeHtml = (value) =>
   String(value)
     .replaceAll("&", "&amp;")
@@ -119,7 +205,10 @@ export const sendTransactionalEmail = async ({
   const mailer = getTransporter();
   try {
     return await mailer.sendMail({
-      from: process.env.MAIL_FROM || process.env.SMTP_USER,
+      from:
+        process.env.MAIL_FROM ||
+        process.env.SMTP_FROM ||
+        process.env.SMTP_USER,
       to,
       subject,
       text,
@@ -131,6 +220,11 @@ export const sendTransactionalEmail = async ({
       !Number.isInteger(error.responseCode) ||
       (error.responseCode >= 400 && error.responseCode < 500);
     error.code = error.code || "SMTP_SEND_FAILED";
+    error.outcomeUnknown =
+      !Number.isInteger(error.responseCode) && error.command === "DATA";
+    const details = getEmailTransportErrorDetails(error);
+    error.statusCode = 503;
+    error.message = details.message;
     throw error;
   }
 };

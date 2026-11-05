@@ -350,6 +350,21 @@ const nextAttemptAt = (attempts, now = Date.now()) => {
   return new Date(now + delay);
 };
 
+const getDeliveryFailureState = (error, attempts) => {
+  const outcomeUnknown = error?.outcomeUnknown === true;
+  const retryable = !outcomeUnknown && error?.retryable !== false;
+  const terminal = !retryable || attempts >= MAX_ATTEMPTS;
+  return {
+    outcomeUnknown,
+    status: outcomeUnknown ? "uncertain" : terminal ? "failed" : "queued",
+    lastErrorCode: outcomeUnknown
+      ? "SMTP_OUTCOME_UNKNOWN"
+      : String(error?.code || "DELIVERY_FAILED").slice(0, 100),
+    nextAttemptAt:
+      outcomeUnknown || terminal ? null : nextAttemptAt(attempts),
+  };
+};
+
 export const enqueueCustomerDeliveries = async ({
   userId,
   eventType,
@@ -515,19 +530,15 @@ export const processNotificationDelivery = async (deliveryId) => {
   try {
     result = await sendDelivery(log);
   } catch (error) {
-    const retryable = error.retryable !== false;
-    const terminal = !retryable || log.attempts >= MAX_ATTEMPTS;
+    const failureState = getDeliveryFailureState(error, log.attempts);
+    const outcomeUnknown = failureState.outcomeUnknown;
     const updates = {
-      status: terminal ? "failed" : "queued",
-      errorMessage: String(error.message || "Delivery failed.").slice(
-        0,
-        1000
-      ),
-      lastErrorCode: String(error.code || "DELIVERY_FAILED").slice(
-        0,
-        100
-      ),
-      nextAttemptAt: terminal ? null : nextAttemptAt(log.attempts),
+      status: failureState.status,
+      errorMessage: outcomeUnknown
+        ? "SMTP timed out during message transmission; check the provider before retrying to avoid duplicate delivery."
+        : String(error.message || "Delivery failed.").slice(0, 1000),
+      lastErrorCode: failureState.lastErrorCode,
+      nextAttemptAt: failureState.nextAttemptAt,
     };
     await NotificationLog.updateOne(
       { _id: log._id, status: "sending" },
@@ -878,6 +889,7 @@ export const stopNotificationDeliveryWorker = async () => {
 export const notificationDeliveryInternals = {
   MAX_ATTEMPTS,
   nextAttemptAt,
+  getFailureState: getDeliveryFailureState,
   renderTemplateText,
   sendDelivery,
 };

@@ -3,7 +3,11 @@ import jwt from "jsonwebtoken";
 import crypto from "node:crypto";
 import mongoose from "mongoose";
 import { enqueueCustomerDeliveries } from "./notificationDeliveryService.js";
-import { renderBrandedEmail, sendTransactionalEmail } from "./emailService.js";
+import {
+  getEmailTransportErrorDetails,
+  renderBrandedEmail,
+  sendTransactionalEmail,
+} from "./emailService.js";
 
 import User from "../models/User.js";
 import RefreshToken from "../models/RefreshToken.js";
@@ -408,7 +412,10 @@ export const resetUserPassword = async ({ resetToken, password }) => {
     });
   } catch (error) {
     emailSent = false;
-    console.error("Password reset confirmation email failed:", error.message);
+    console.error(
+      "Password reset confirmation email failed:",
+      getEmailTransportErrorDetails(error)
+    );
   }
   return { success: true, emailSent };
 };

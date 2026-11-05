@@ -10,8 +10,8 @@ The route paths below are derived from `Backend/app.js` and the route/controller
 | `GET /products/:slug` | Public. Product slug. | `{ success, product }`; includes active category, `images`, active `variants` with final prices, and review summary. No live stock count is returned. | Product detail. A variant is required when active variants are present. |
 | `GET /products/:slug/reviews` | Public. `page`, `limit`, `rating`, `sort` (`newest`, `oldest`, `highest`, `lowest`). | `{ success, data: { product, reviews, pagination, summary } }`; only approved reviews are returned. | Product ratings and review list. |
 | `GET /categories`, `GET /categories/:slug` | Public. List supports `page`, `limit`, `search`, `parentCategory`, `isFeatured`; public results contain active categories. | List `{ success, categories, pagination }`; detail `{ success, category }`. | Navigation and homepage collection cards. |
-| `POST /auth/register`, `POST /auth/login` | Public. Register `{ name, email, phone?, password }`; login `{ email, password }`. Backend applies Zod validation. | `{ success, user, accessToken }`; backend sets an HTTP-only `nishree_refresh` cookie. | Registration and sign-in. Access tokens stay in memory. |
-| `POST /auth/refresh`, `POST /auth/logout`, `GET /auth/me` | Refresh/logout use the HTTP-only cookie; `/me` requires `Authorization: Bearer <accessToken>`. | Refresh `{ success, user, accessToken }`; logout `{ success, message }`; `/me` `{ success, user }`. | Session restore, refresh and sign-out. OTP, email verification and password reset are not mounted. |
+| `POST /auth/register`, `POST /auth/login`, `POST /auth/login/verify-otp`, `POST /auth/register/verify-email` | Public. Register `{ name, email, phone?, password }`; login `{ email, password }`; OTP confirmation `{ challengeId, otp }`. Backend applies Zod validation. | Register/login issue an email OTP challenge; verified OTP returns `{ success, user, accessToken }` and sets an HTTP-only `nishree_refresh` cookie. | Registration, email verification and sign-in. Access tokens stay in memory until verified. |
+| `POST /auth/forgot-password`, `POST /auth/forgot-password/verify-otp`, `POST /auth/forgot-password/reset`, `POST /auth/refresh`, `POST /auth/logout`, `GET /auth/me` | Password recovery uses `{ email }`, `{ challengeId, otp }`, then `{ resetToken, password }`. Refresh/logout use the HTTP-only cookie; `/me` requires a bearer token. | Recovery starts with a non-enumerating response, confirms the emailed OTP, then resets the password. Refresh `{ success, user, accessToken }`; logout `{ success, message }`; `/me` `{ success, user }`. | Password recovery and session restore, refresh and sign-out. |
 | `GET /cart`, `POST /cart/items`, `PATCH /cart/items/:itemId`, `DELETE /cart/items/:itemId`, `DELETE /cart` | Optional customer bearer token. Guests use `nishree_guest_cart` HTTP-only cookie. Add `{ product, variant?, quantity? }`; quantity update `{ quantity }`. | `{ success, cart }`. Cart contains server prices, line totals, available quantity, `isAvailable`, `canCheckout` and totals. | Bag drawer/page. `withCredentials` preserves guest-cart cookies. |
 | `GET /wishlist`, `POST /wishlist/products`, `DELETE /wishlist/products/:productId`, `DELETE /wishlist` | Customer bearer token. Add body `{ productId }`. | `{ success, wishlist }`; customer response contains populated active products. | Saved-product controls and `/wishlist`. |
 | `/addresses` | Customer bearer token. `GET /`, `POST /`, `GET /:addressId`, `PATCH /:addressId`, `PATCH /:addressId/default`, `DELETE /:addressId`. Address fields follow the `Address` model and service normalization. | List `{ success, addresses, count }`; create/update/default `{ success, address }`; delete `{ success, ...result }`. | Checkout and account address management. Ownership is enforced by the service. |
@@ -28,7 +28,7 @@ The route paths below are derived from `Backend/app.js` and the route/controller
 
 ## Admin, callbacks and server-only operations
 
-This storefront does not expose administrative operations. `POST /api/v1/admin/auth/login`, `/refresh`, `/logout`, and `GET /me` implement admin session lifecycle. Other `/api/v1/admin/*` routes require admin JWT plus per-resource RBAC.
+This storefront does not expose administrative operations. `POST /api/v1/admin/auth/login` issues an email OTP challenge; `/login/verify-otp` completes sign-in, and `/login/resend-otp`, `/refresh`, `/logout`, and `GET /me` support the admin session lifecycle. Other `/api/v1/admin/*` routes require admin JWT plus per-resource RBAC.
 
 | Mounted route group | Operations and permission checks |
 | --- | --- |
@@ -45,8 +45,7 @@ This storefront does not expose administrative operations. `POST /api/v1/admin/a
 
 ## Verified limits and missing public APIs
 
-- There is no newsletter/contact-message endpoint, so no success-simulating form is shown.
-- OTP, email-verification and password-reset models exist, but customer routes do not expose those workflows.
+- No newsletter endpoint is mounted. Contact messages use `POST /contact`, are validated and sent to the configured store support email through SMTP.
 - There is no public shipping-rate/estimate or store-settings endpoint. Checkout does not invent those values; saved order amounts are shown from the server.
 - Product list filters support material and price but not colour. Sort does not include price ordering; UI uses only supported values.
 - Product detail exposes active variants but no live stock count; bag availability comes from the server cart.

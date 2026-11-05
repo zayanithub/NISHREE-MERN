@@ -11,7 +11,10 @@ import {
 } from "./service/notificationService.js";
 import { validateRuntimeConfig } from "./config/runtimeConfig.js";
 import mongoose from "mongoose";
-import { verifyEmailTransport } from "./service/emailService.js";
+import {
+  getEmailTransportErrorDetails,
+  verifyEmailTransport,
+} from "./service/emailService.js";
 
 const startServer = async () => {
   try {
@@ -32,7 +35,7 @@ const startServer = async () => {
       .catch((error) => {
         console.error(
           "SMTP verification failed; the API is available, but email delivery may be unavailable.",
-          { code: error.code || "SMTP_VERIFY_FAILED" }
+          getEmailTransportErrorDetails(error)
         );
       });
 
