@@ -13,6 +13,12 @@ import AdminProtectedRoute from './admin/AdminProtectedRoute';
 import { ThemeProvider } from './theme/ThemeContext';
 
 const HomePage = lazy(() => import('./pages/HomePage'));
+const NewArrivalsPage = lazy(() => import('./pages/NewArrivalsPage'));
+const AtelierPage = lazy(() => import('./pages/AtelierPage'));
+const FindYourDrapePage = lazy(() => import('./pages/FindYourDrapePage'));
+const ProductHubPage = lazy(() => import('./pages/ProductHubPage'));
+const BlogsPage = lazy(() => import('./pages/BlogsPage'));
+const BlogPostPage = lazy(() => import('./pages/BlogPostPage'));
 const ShopPage = lazy(() => import('./pages/ShopPage'));
 const ProductPage = lazy(() => import('./pages/ProductPage'));
 const CartPage = lazy(() => import('./pages/CartPage'));
@@ -44,9 +50,19 @@ const AdminPolicyPage = lazy(() => import('./admin/pages/AdminPolicyPage'));
 const AdminCouponPage = lazy(() => import('./admin/pages/AdminCouponPage'));
 const AdminAftercarePage = lazy(() => import('./admin/pages/AdminAftercarePage'));
 const AdminHomepageImagesPage = lazy(() => import('./admin/pages/AdminHomepageImagesPage'));
+const AdminBlogPostsPage = lazy(() => import('./admin/pages/AdminBlogPostsPage'));
 
 function NotFoundPage() {
   return <div className="page-wrap not-found-page"><span className="eyebrow">A small detour</span><h1>This page has slipped away.</h1><p>The link may have moved. Let us take you back to the Nishree collection.</p><a className="button button-primary" href="/">Return home</a></div>;
+}
+
+function LegacyHomeRoute() {
+  const location = useLocation();
+  const legacyDestination = {
+    '#new-arrivals': '/new-arrivals',
+    '#atelier': '/atelier',
+  }[location.hash];
+  return legacyDestination ? <Navigate to={legacyDestination} replace /> : <HomePage />;
 }
 
 function AppRoutes() {
@@ -55,6 +71,13 @@ function AppRoutes() {
     <Suspense fallback={<div className="route-fallback" role="status"><span className="eyebrow">NISHREE ATTIRE</span><span>Unfolding the collection…</span></div>}><Routes>
       <Route element={<StorefrontLayout />}>
         <Route index element={<HomePage />} />
+        <Route path="home" element={<LegacyHomeRoute />} />
+        <Route path="new-arrivals" element={<NewArrivalsPage />} />
+        <Route path="atelier" element={<AtelierPage />} />
+        <Route path="find-your-drape" element={<FindYourDrapePage />} />
+        <Route path="product_hub" element={<ProductHubPage />} />
+        <Route path="blogs" element={<BlogsPage />} />
+        <Route path="blogs/:slug" element={<BlogPostPage />} />
         <Route path="shop" element={<ShopPage key={`${location.pathname}${location.search}`} />} />
         <Route path="collections/:slug" element={<ShopPage key={`${location.pathname}${location.search}`} />} />
         <Route path="products/:slug" element={<ProductPage />} />
@@ -64,9 +87,9 @@ function AppRoutes() {
         <Route path="policies" element={<PoliciesPage />} />
         <Route path="policies/:section" element={<PoliciesPage />} />
         <Route path="bag" element={<CartPage />} />
-        <Route path="login" element={<AuthPage mode="login" />} />
-        <Route path="register" element={<AuthPage mode="register" />} />
-        <Route path="forgot-password" element={<AuthPage mode="forgot" />} />
+        <Route path="login" element={<AuthPage key={location.pathname} mode="login" />} />
+        <Route path="register" element={<AuthPage key={location.pathname} mode="register" />} />
+        <Route path="forgot-password" element={<AuthPage key={location.pathname} mode="forgot" />} />
         <Route path="checkout" element={<ProtectedRoute><CheckoutPage /></ProtectedRoute>} />
         <Route path="wishlist" element={<Navigate to="/account/wishlist" replace />} />
         <Route path="account" element={<ProtectedRoute><AccountLayout /></ProtectedRoute>}>
@@ -86,6 +109,7 @@ function AppRoutes() {
         <Route index element={<AdminDashboardPage />} />
         <Route path="products" element={<AdminProductsPage />} />
         <Route path="homepage-images" element={<AdminHomepageImagesPage />} />
+        <Route path="blogs" element={<AdminBlogPostsPage />} />
         <Route path="categories" element={<AdminCategoriesPage />} />
         <Route path="inventory" element={<AdminInventoryPage />} />
         <Route path="orders" element={<AdminOrdersPage />} />

@@ -8,7 +8,7 @@ import path from "node:path";
 */
 
 const MAX_IMAGE_SIZE = 5 * 1024 * 1024; // 5 MB per image
-const MAX_IMAGES = 8;
+const MAX_IMAGES = 5;
 
 /*
 |--------------------------------------------------------------------------
@@ -78,7 +78,7 @@ const upload = multer({
 | Product Images Middleware
 |--------------------------------------------------------------------------
 | Expected multipart/form-data field name: images
-| Maximum: 8 images per request
+| Maximum: 5 images per request
 | Maximum size: 5 MB per image
 |--------------------------------------------------------------------------
 */
@@ -115,7 +115,7 @@ export const uploadProductImages = (req, res, next) => {
         return res.status(400).json({
           success: false,
           message:
-            "Upload a maximum of 8 images using the field name 'images'.",
+            "Upload a maximum of 5 images using the field name 'images'.",
         });
       }
 

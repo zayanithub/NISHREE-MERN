@@ -126,8 +126,96 @@ export const sareeCatalogueProducts = concepts.map((concept, index) => {
   };
 });
 
+const modelSareeStyles = [
+  { name: 'Sandal Rose Model Saree', color: 'Sandal rose', files: ['Model_Sandal_rose_1.jpg', 'Model_Sandal_rose_2.jpg', 'Model_Sandal_rose_3.jpg'] },
+  { name: 'Sandal Violet Model Saree', color: 'Sandal violet', files: ['Model_Sandal_volit_1.jpg', 'Model_Sandal_volit_2.jpg', 'Model_Sandal_volit_3.jpg'] },
+  { name: 'Blue Model Saree', color: 'Blue', files: ['Model_Saree_Blue_1.jpg', 'Model_Saree_Blue_2.jpg', 'Model_Saree_Blue_3.jpg'] },
+  { name: 'Peach Model Saree', color: 'Peach', files: ['Model_Saree_peach_1.jpg', 'Model_Saree_peach_2.jpg', 'Model_Saree_peach_3.jpg'] },
+  { name: 'Red Model Saree', color: 'Red', files: ['Model_Saree_red_1.jpg', 'Model_Saree_red_2.jpg', 'Model_Saree_red_3.jpg'] },
+  { name: 'Red and Green Model Saree', color: 'Red and green', files: ['Model_Saree_red_dreen_1.jpg', 'Model_Saree_red_dreen_2.jpg', 'Model_Saree_red_dreen_3.jpg'] },
+  { name: 'Violet Model Saree', color: 'Violet', files: ['Model_Saree_violet_1.jpg', 'Model_Saree_violet_2.jpg', 'Model_Saree_violet_3.jpg'] },
+  { name: 'Orchid Model Saree', color: 'Orchid violet', files: ['Model_Saree_volit_1.jpg', 'Model_Saree_volit_2.jpg', 'Model_Saree_volit_3.jpg'] },
+  { name: 'Mildred Model Saree', color: 'Mildred', files: ['Model_saree_mildred_1.jpg', 'Model_saree_mildred_2.jpg', 'Model_saree_mildred_3.jpg'] },
+  { name: 'Purple Model Saree', color: 'Purple', files: ['Model_saree_purple_1.jpg', 'Model_saree_purple_2.jpg', 'Model_saree_purple_3.jpg'] },
+];
+
+export const modelSareeImageSources = modelSareeStyles.flatMap((style) => style.files.map((sourceFileName, index) => {
+  const fileStem = sourceFileName.replace(/\.[^.]+$/, '');
+  const fileName = `${slugify(fileStem)}.jpg`;
+  return {
+    sourceFileName,
+    fileName,
+    storefrontUrl: `/catalogue-models/${fileName}`,
+    altText: `${style.color} model saree photo ${index + 1}; product details are unverified.`,
+    credit: 'Nishree Attire project image asset',
+    license: 'Project asset',
+  };
+}));
+
+export const sareeModelProducts = modelSareeStyles.map((style, index) => {
+  const sku = `NIA-MODEL-${String(index + 1).padStart(3, '0')}`;
+  const galleryImages = style.files.map((sourceFileName, imageIndex) => {
+    const image = modelSareeImageSources.find((item) => item.sourceFileName === sourceFileName);
+    return {
+      url: image.storefrontUrl,
+      altText: image.altText,
+      sortOrder: imageIndex,
+      isPrimary: imageIndex === 0,
+    };
+  });
+  return {
+    name: style.name,
+    sku,
+    slug: slugify(style.name),
+    description: `This draft listing groups three supplied ${style.color.toLowerCase()} model photographs. Saree material, weave, dimensions, blouse details, colour accuracy, and selling price have not been verified. Confirm the product information, add any required images, and set a price before publishing.`,
+    shortDescription: `Three ${style.color.toLowerCase()} model photographs; product details and price are pending verification.`,
+    fabricCare: 'Care instructions are not verified. Confirm with the supplier before publishing.',
+    material: 'Details to be confirmed',
+    color: style.color,
+    categorySlug: 'silk-sarees',
+    primaryImageUrl: galleryImages[0].url,
+    galleryImages,
+    imageAltText: galleryImages[0].altText,
+    imageCredit: 'Nishree Attire project image asset',
+    imageLicense: 'Project asset',
+    imageSourceUrl: '',
+    tags: ['model-photo', 'stock-unverified', 'draft-review'],
+    occasion: [],
+    basePrice: 0,
+    salePrice: null,
+    currency: 'INR',
+    availableQuantity: 0,
+    stockIsVerified: false,
+    status: 'draft',
+    isFeatured: false,
+    brand: 'Nishree Attire',
+    sareeLength: '',
+    blouseIncluded: false,
+    blouseType: 'none',
+  };
+});
+
+export const validateModelSareeProducts = () => {
+  const unique = (values) => new Set(values).size === values.length;
+  if (sareeModelProducts.length !== 10) throw new Error(`Expected 10 model saree products, received ${sareeModelProducts.length}.`);
+  if (modelSareeImageSources.length !== 30) throw new Error(`Expected 30 model saree images, received ${modelSareeImageSources.length}.`);
+  if (!unique(sareeModelProducts.map((product) => product.sku))) throw new Error('Model saree SKUs must be unique.');
+  if (!unique(sareeModelProducts.map((product) => product.slug))) throw new Error('Model saree slugs must be unique.');
+  if (!unique(modelSareeImageSources.map((image) => image.storefrontUrl))) throw new Error('Model saree image URLs must be unique.');
+  for (const product of sareeModelProducts) {
+    if (product.galleryImages.length !== 3 || product.status !== 'draft' || product.basePrice !== 0 || product.availableQuantity !== 0) {
+      throw new Error(`Model saree sample ${product.sku} must remain a zero-stock draft until verified.`);
+    }
+    if (!product.description || !product.imageAltText || !product.imageCredit) {
+      throw new Error(`Model saree sample ${product.sku} is missing review details.`);
+    }
+  }
+  return true;
+};
+
 export const validateSareeCatalogue = () => {
   const unique = (values) => new Set(values).size === values.length;
+  validateModelSareeProducts();
   if (sareeCatalogueProducts.length !== 50) throw new Error(`Expected 50 catalogue products, received ${sareeCatalogueProducts.length}.`);
   if (!unique(sareeCatalogueProducts.map((product) => product.sku))) throw new Error('Catalogue SKUs must be unique.');
   if (!unique(sareeCatalogueProducts.map((product) => product.slug))) throw new Error('Catalogue slugs must be unique.');

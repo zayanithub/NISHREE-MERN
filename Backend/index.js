@@ -11,10 +11,6 @@ import {
 } from "./service/notificationService.js";
 import { validateRuntimeConfig } from "./config/runtimeConfig.js";
 import mongoose from "mongoose";
-import {
-  getEmailTransportErrorDetails,
-  verifyEmailTransport,
-} from "./service/emailService.js";
 
 const startServer = async () => {
   try {
@@ -26,18 +22,12 @@ const startServer = async () => {
     const server = app.listen(port, () => {
       console.log(`Nishree Attire API running on port ${port}`);
       console.log(`Health check: http://localhost:${port}/api/health`);
+      console.log(
+        process.env.RESEND_API_KEY && process.env.EMAIL_FROM
+          ? "Resend email API is configured."
+          : "Resend email API is not configured in this environment."
+      );
     });
-
-    void verifyEmailTransport()
-      .then(() => {
-        console.log("SMTP connection and authentication verified.");
-      })
-      .catch((error) => {
-        console.error(
-          "SMTP verification failed; the API is available, but email delivery may be unavailable.",
-          getEmailTransportErrorDetails(error)
-        );
-      });
 
     let shutdownPromise = null;
     const shutdown = (signal) => {

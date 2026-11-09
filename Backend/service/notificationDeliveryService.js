@@ -308,6 +308,7 @@ const sendDelivery = async (log) => {
       to: log.recipient,
       subject: template.subject,
       text: template.body,
+      idempotencyKey: `notification-${String(log._id)}`,
       html: renderBrandedEmail({
         title: template.subject,
         preheader: template.body.slice(0, 150),
@@ -317,10 +318,10 @@ const sendDelivery = async (log) => {
       }),
     });
     return {
-      provider: "smtp",
+      provider: "resend",
       providerMessageId: requireProviderMessageId(
         result.messageId,
-        "SMTP"
+        "Resend"
       ),
     };
   }
@@ -358,7 +359,7 @@ const getDeliveryFailureState = (error, attempts) => {
     outcomeUnknown,
     status: outcomeUnknown ? "uncertain" : terminal ? "failed" : "queued",
     lastErrorCode: outcomeUnknown
-      ? "SMTP_OUTCOME_UNKNOWN"
+      ? "RESEND_OUTCOME_UNKNOWN"
       : String(error?.code || "DELIVERY_FAILED").slice(0, 100),
     nextAttemptAt:
       outcomeUnknown || terminal ? null : nextAttemptAt(attempts),
@@ -439,7 +440,7 @@ export const enqueueCustomerDeliveries = async ({
           channel,
           recipient: recipientFor[channel],
           provider: {
-            email: "smtp",
+            email: "resend",
             sms: "twilio",
             whatsapp: "meta_whatsapp",
           }[channel],
@@ -535,7 +536,7 @@ export const processNotificationDelivery = async (deliveryId) => {
     const updates = {
       status: failureState.status,
       errorMessage: outcomeUnknown
-        ? "SMTP timed out during message transmission; check the provider before retrying to avoid duplicate delivery."
+        ? "The email provider's response could not be confirmed; check Resend before retrying to avoid duplicate delivery."
         : String(error.message || "Delivery failed.").slice(0, 1000),
       lastErrorCode: failureState.lastErrorCode,
       nextAttemptAt: failureState.nextAttemptAt,

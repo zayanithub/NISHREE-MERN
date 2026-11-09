@@ -6,6 +6,10 @@ import cloudinary, {
 
 import Product from "../models/Product.js";
 import ProductImage from "../models/ProductImage.js";
+import {
+  hashProductImage,
+  validateProductImageFiles,
+} from "./productImageValidation.js";
 
 /*
 |--------------------------------------------------------------------------
@@ -208,35 +212,19 @@ export const uploadProductImages = async (
   altTexts
 ) => {
   validateAdminId(adminId);
+  const hashes = validateProductImageFiles(files);
   assertCloudinaryConfigured();
 
-  if (!Array.isArray(files) || files.length === 0) {
-    throw createError(
-      "Please provide at least one image.",
-      400
-    );
-  }
-
-  if (files.length > 8) {
-    throw createError(
-      "A maximum of 8 images can be uploaded at a time.",
-      400
-    );
-  }
-
-  for (const file of files) {
-    if (
-      !Buffer.isBuffer(file.buffer) ||
-      file.buffer.length === 0
-    ) {
-      throw createError(
-        "An uploaded image is invalid or empty.",
-        400
-      );
-    }
-  }
-
   const product = await findProduct(productId);
+  const contentHashes = hashes;
+  const existingHashes = await ProductImage.find({
+    product: product._id,
+    contentHash: { $in: contentHashes },
+  }).select("_id");
+
+  if (existingHashes.length) {
+    throw createError("This product already contains one or more of these images.", 409);
+  }
 
   const folder =
     `nishree-attaire/products/${product._id}`;
@@ -259,10 +247,21 @@ export const uploadProductImages = async (
       .lean(),
   ]);
 
-  const nextSortOrder =
-    (lastImage?.sortOrder ?? -1) + 1;
+  const hasLegacyPrimary = existingCount === 0 && Boolean(product.primaryImage?.url);
+  const currentImageCount = existingCount + Number(hasLegacyPrimary);
+  if (currentImageCount + files.length > 5) {
+    throw createError(
+      `This product can have up to 5 unique images. It currently has ${currentImageCount}.`,
+      400
+    );
+  }
 
-  const shouldSetPrimary = existingCount === 0;
+  const nextSortOrder = Math.max(
+    lastImage?.sortOrder ?? -1,
+    hasLegacyPrimary ? 0 : -1
+  ) + 1;
+
+  const shouldSetPrimary = existingCount === 0 && !hasLegacyPrimary;
 
   let uploadedAssets = [];
   let savedImages = [];
@@ -308,6 +307,19 @@ export const uploadProductImages = async (
       );
     }
 
+    if (hasLegacyPrimary) {
+      const legacyImage = await ProductImage.create({
+        product: product._id,
+        url: product.primaryImage.url,
+        publicId: product.primaryImage.publicId || `legacy:${product._id}`,
+        contentHash: "",
+        altText: product.imageAltText || product.name,
+        sortOrder: 0,
+        isPrimary: true,
+      });
+      savedImages.push(legacyImage);
+    }
+
     /*
      * Prepare MongoDB documents only after all uploads succeed.
      */
@@ -317,6 +329,7 @@ export const uploadProductImages = async (
         product: product._id,
         url: asset.url,
         publicId: asset.publicId,
+        contentHash: hashProductImage(files[index].buffer),
         altText: normalizedAltTexts[index],
         sortOrder: nextSortOrder + index,
         isPrimary: shouldSetPrimary && index === 0,
@@ -384,11 +397,23 @@ export const listProductImages = async (productId) => {
     product: product._id,
   })
     .sort({
-      isPrimary: -1,
       sortOrder: 1,
       createdAt: 1,
     })
     .lean();
+
+  if (!images.length && product.primaryImage?.url) {
+    return [{
+      _id: null,
+      product: product._id,
+      url: product.primaryImage.url,
+      publicId: product.primaryImage.publicId || "",
+      altText: product.imageAltText || product.name,
+      sortOrder: 0,
+      isPrimary: true,
+      isLegacy: true,
+    }];
+  }
 
   return images;
 };
@@ -520,6 +545,42 @@ export const setPrimaryProductImage = async (
   }
 };
 
+export const reorderProductImages = async (
+  productId,
+  imageIds,
+  adminId
+) => {
+  validateAdminId(adminId);
+  const product = await findProduct(productId);
+
+  if (!Array.isArray(imageIds) || imageIds.length < 1 || imageIds.length > 5) {
+    throw createError("Provide the ordered IDs for 1–5 product images.", 400);
+  }
+
+  if (new Set(imageIds).size !== imageIds.length ||
+    imageIds.some((id) => !isValidObjectId(String(id)))) {
+    throw createError("Product image order contains invalid or repeated IDs.", 400);
+  }
+
+  const existing = await ProductImage.find({ product: product._id })
+    .select("_id")
+    .lean();
+  const existingIds = new Set(existing.map((image) => String(image._id)));
+  if (existingIds.size !== imageIds.length ||
+    imageIds.some((id) => !existingIds.has(String(id)))) {
+    throw createError("Image order must include each current product image exactly once.", 400);
+  }
+
+  await Promise.all(imageIds.map((id, sortOrder) => ProductImage.updateOne(
+    { _id: id, product: product._id },
+    { $set: { sortOrder } }
+  )));
+
+  product.updatedBy = adminId;
+  await product.save();
+  return listProductImages(product._id);
+};
+
 /*
 |--------------------------------------------------------------------------
 | 4. Delete A Product Image
@@ -582,7 +643,9 @@ export const deleteProductImage = async (
    * If Cloudinary deletion fails, retain the database record.
    */
 
-  await destroyCloudinaryImage(image.publicId);
+  if (!String(image.publicId || "").startsWith("legacy:")) {
+    await destroyCloudinaryImage(image.publicId);
+  }
 
   await ProductImage.deleteOne({
     _id: image._id,

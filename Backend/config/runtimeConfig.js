@@ -24,38 +24,33 @@ const requireHttpsUrl = (value, name) => {
   throw new Error(`${name} must be an HTTPS URL.`);
 };
 
-const validateSmtpConfig = (env, required) => {
-  const smtpFields = ["SMTP_HOST", "SMTP_PORT", "SMTP_USER", "SMTP_PASS"];
-  const configured = smtpFields.some(
-    (field) => typeof env[field] === "string" && env[field].trim()
+const isValidEmailAddress = (value) =>
+  typeof value === "string" &&
+  value.length <= 254 &&
+  /^[^\s@<>(),;:"[\]\\]+@[^\s@<>(),;:"[\]\\]+\.[^\s@<>(),;:"[\]\\]+$/.test(
+    value
   );
-  if (
-    env.SMTP_SECURE !== undefined &&
-    !["true", "false"].includes(String(env.SMTP_SECURE).toLowerCase())
-  ) {
-    throw new Error("SMTP_SECURE must be true or false.");
-  }
-  if (!required && !configured) {
+
+const validateResendConfig = (env, required) => {
+  const apiKey =
+    typeof env.RESEND_API_KEY === "string" ? env.RESEND_API_KEY.trim() : "";
+  const apiKeyConfigured =
+    /^re_[A-Za-z0-9_-]+$/.test(apiKey) &&
+    !/^re_your_new_api_key$/i.test(apiKey);
+  const senderConfigured =
+    typeof env.EMAIL_FROM === "string" && env.EMAIL_FROM.trim();
+
+  if (!required && !apiKeyConfigured && !senderConfigured) {
     return;
   }
-
-  const port = Number(env.SMTP_PORT);
-  if (
-    typeof env.SMTP_HOST !== "string" ||
-    !env.SMTP_HOST.trim() ||
-    !Number.isInteger(port) ||
-    port < 1 ||
-    port > 65535 ||
-    typeof env.SMTP_USER !== "string" ||
-    !env.SMTP_USER.trim() ||
-    typeof env.SMTP_PASS !== "string" ||
-    !env.SMTP_PASS.trim()
-  ) {
+  if (!apiKeyConfigured || !senderConfigured) {
     throw new Error(
-      "SMTP_HOST, SMTP_PORT, SMTP_USER, and SMTP_PASS must be configured with valid values."
+      "RESEND_API_KEY and EMAIL_FROM must both be configured for email delivery."
     );
   }
-
+  if (!isValidEmailAddress(env.EMAIL_FROM)) {
+    throw new Error("EMAIL_FROM must be a valid email address.");
+  }
 };
 
 export const validateRuntimeConfig = (env = process.env) => {
@@ -84,9 +79,9 @@ export const validateRuntimeConfig = (env = process.env) => {
     if (env.PUBLIC_API_URL) {
       requireHttpsUrl(env.PUBLIC_API_URL, "PUBLIC_API_URL");
     }
-    validateSmtpConfig(env, true);
+    validateResendConfig(env, true);
   } else {
-    validateSmtpConfig(env, false);
+    validateResendConfig(env, false);
   }
 
   return { port, sameSite };
@@ -95,5 +90,5 @@ export const validateRuntimeConfig = (env = process.env) => {
 export const runtimeConfigInternals = {
   isValidMongoUrl,
   requireHttpsUrl,
-  validateSmtpConfig,
+  validateResendConfig,
 };

@@ -1,92 +1,59 @@
-import nodemailer from "nodemailer";
+import { Resend } from "resend";
 
-let transporter;
+const RESEND_API_URL = "https://api.resend.com";
+const EMAIL_REQUEST_TIMEOUT_MS = 10_000;
+const MAX_EMAIL_CONTENT_LENGTH = 1_000_000;
+const EMAIL_PATTERN = /^[^\s@<>(),;:"[\]\\]+@[^\s@<>(),;:"[\]\\]+\.[^\s@<>(),;:"[\]\\]+$/;
 
-const smtpErrorCategories = {
-  ETIMEDOUT: {
-    category: "timeout",
-    message:
-      "The SMTP operation timed out. Check SMTP DNS, host and port, outbound firewall rules, TLS mode, and provider availability.",
-  },
-  ECONNECTION: {
-    category: "connection",
-    message:
-      "The SMTP connection could not be established. Check outbound SMTP access and the configured host and port.",
-  },
-  ECONNREFUSED: {
-    category: "connection_refused",
-    message:
-      "The SMTP server refused the connection. Check the configured host, port, and provider availability.",
-  },
-  ECONNRESET: {
-    category: "connection_reset",
-    message:
-      "The SMTP connection was reset by the network or provider. Check outbound SMTP access and provider availability.",
-  },
-  EACCES: {
-    category: "egress_denied",
-    message:
-      "The runtime denied SMTP socket access. Check its outbound network policy; provider connectivity could not be established from this runtime.",
-  },
-  ENOTFOUND: {
-    category: "dns",
-    message:
-      "The SMTP hostname could not be resolved. Check SMTP_HOST and the runtime DNS configuration.",
-  },
-  EDNS: {
-    category: "dns",
-    message:
-      "SMTP hostname resolution failed. Check SMTP_HOST and the runtime DNS configuration.",
-  },
-  EAUTH: {
-    category: "authentication",
-    message:
-      "The SMTP provider rejected authentication. Verify SMTP_USER and the provider-issued SMTP credential.",
-  },
-  EPROTOCOL: {
-    category: "tls",
-    message:
-      "The SMTP TLS protocol negotiation failed. Check the provider's required TLS mode and port.",
-  },
+const createEmailError = (message, code, statusCode, retryable = false) => {
+  const error = new Error(message);
+  error.code = code;
+  error.statusCode = statusCode;
+  error.retryable = retryable;
+  return error;
 };
 
-const isTlsError = (code) =>
-  /^(?:ERR_TLS_|ERR_SSL_|CERT_|SELF_SIGNED_CERT|UNABLE_TO_VERIFY_LEAF_SIGNATURE)/i.test(
-    code
-  );
+const isValidEmailAddress = (value) =>
+  typeof value === "string" &&
+  value.length <= 254 &&
+  EMAIL_PATTERN.test(value);
 
-export const getEmailTransportErrorDetails = (error) => {
-  const rawCode =
+export const isTransactionalEmailConfigured = () => {
+  const apiKey = process.env.RESEND_API_KEY?.trim();
+  return Boolean(
+    typeof apiKey === "string" &&
+      /^re_[A-Za-z0-9_-]+$/.test(apiKey) &&
+      !/^re_your_new_api_key$/i.test(apiKey) &&
+      isValidEmailAddress(process.env.EMAIL_FROM)
+  );
+};
+
+export const getEmailDeliveryErrorDetails = (error) => ({
+  code:
     typeof error?.code === "string" && /^[A-Z0-9_]+$/i.test(error.code)
       ? error.code
-      : "SMTP_VERIFY_FAILED";
-  const known = smtpErrorCategories[rawCode];
-  const tlsError =
-    isTlsError(rawCode) ||
-    (rawCode === "ESOCKET" &&
-      /tls|ssl|certificate/i.test(String(error?.message || "")));
-  const command =
-    typeof error?.command === "string" &&
-    /^(?:CONN|AUTH|MAIL FROM|RCPT TO|DATA|STARTTLS|EHLO|QUIT)(?:\s+[A-Z0-9_-]+)?$/i.test(
-      error.command
-    )
-      ? error.command
-      : undefined;
-
-  return {
-    code: rawCode,
-    category: known?.category || (tlsError ? "tls" : "smtp"),
-    message:
-      known?.message ||
-      (tlsError
-        ? "The SMTP TLS handshake or certificate validation failed. Check the provider's required TLS mode and certificate."
-        : "SMTP verification failed. Check the provider response and SMTP configuration."),
-    ...(Number.isInteger(error?.responseCode)
-      ? { responseCode: error.responseCode }
-      : {}),
-    ...(command ? { command } : {}),
-  };
-};
+      : "EMAIL_DELIVERY_FAILED",
+  category: error?.outcomeUnknown
+    ? "outcome_unknown"
+    : (error?.providerStatusCode ?? error?.statusCode) === 401 ||
+        (error?.providerStatusCode ?? error?.statusCode) === 403
+      ? "configuration"
+      : (error?.providerStatusCode ?? error?.statusCode) === 429
+        ? "rate_limit"
+        : (error?.providerStatusCode ?? error?.statusCode) >= 500
+          ? "provider"
+          : error?.statusCode
+            ? "request"
+            : "network",
+  ...(Number.isInteger(error?.statusCode)
+    ? { statusCode: error.statusCode }
+    : {}),
+  ...(Number.isInteger(error?.providerStatusCode)
+    ? { providerStatusCode: error.providerStatusCode }
+    : {}),
+  retryable: error?.retryable === true,
+  outcomeUnknown: error?.outcomeUnknown === true,
+});
 
 const escapeHtml = (value) =>
   String(value)
@@ -149,44 +116,30 @@ export const renderBrandedEmail = ({
   ].join("");
 };
 
-const getTransporter = () => {
-  if (transporter) {
-    return transporter;
-  }
-
-  const { SMTP_HOST, SMTP_PORT, SMTP_USER, SMTP_PASS } = process.env;
-  const port = Number(SMTP_PORT);
-  if (
-    !SMTP_HOST ||
-    !Number.isInteger(port) ||
-    port < 1 ||
-    port > 65535 ||
-    !SMTP_USER ||
-    !SMTP_PASS
-  ) {
-    const error = new Error("SMTP configuration is incomplete or invalid.");
-    error.retryable = false;
-    error.code = "SMTP_CONFIG_MISSING";
-    throw error;
-  }
-
-  transporter = nodemailer.createTransport({
-    host: SMTP_HOST,
-    port,
-    connectionTimeout: 10_000,
-    greetingTimeout: 10_000,
-    socketTimeout: 20_000,
-    secure:
-      process.env.SMTP_SECURE === undefined
-        ? port === 465
-        : process.env.SMTP_SECURE.toLowerCase() === "true",
-    auth: {
-      user: SMTP_USER,
-      pass: SMTP_PASS,
-    },
+export const sendVerificationCodeEmail = async ({
+  to,
+  otp,
+  purpose,
+  challengeId,
+  otpHash,
+  subject,
+  title,
+  preheader,
+  body,
+  text,
+}) =>
+  sendTransactionalEmail({
+    to,
+    subject,
+    text,
+    idempotencyKey: ["otp", purpose, challengeId, otpHash].join("-"),
+    html: renderBrandedEmail({
+      title,
+      preheader,
+      body,
+      otp,
+    }),
   });
-  return transporter;
-};
 
 export const sendTransactionalEmail = async ({
   to,
@@ -194,47 +147,140 @@ export const sendTransactionalEmail = async ({
   text,
   html,
   replyTo,
+  idempotencyKey,
 }) => {
-  if (!to || !subject || !text || !html) {
-    const error = new Error("Email recipient and content are required.");
-    error.retryable = false;
-    error.code = "EMAIL_PAYLOAD_INVALID";
-    throw error;
+  if (
+    !isValidEmailAddress(to) ||
+    typeof subject !== "string" ||
+    !subject.trim() ||
+    subject.length > 255 ||
+    /[\r\n]/.test(subject) ||
+    (typeof text !== "string" && typeof html !== "string") ||
+    (text !== undefined &&
+      (typeof text !== "string" ||
+        !text.trim() ||
+        text.length > MAX_EMAIL_CONTENT_LENGTH)) ||
+    (html !== undefined &&
+      (typeof html !== "string" ||
+        !html.trim() ||
+        html.length > MAX_EMAIL_CONTENT_LENGTH)) ||
+    (replyTo !== undefined && !isValidEmailAddress(replyTo)) ||
+    (idempotencyKey !== undefined &&
+      (typeof idempotencyKey !== "string" ||
+        !/^[a-zA-Z0-9._:-]{1,256}$/.test(idempotencyKey)))
+  ) {
+    throw createEmailError(
+      "Email request parameters are invalid.",
+      "EMAIL_PAYLOAD_INVALID",
+      400
+    );
   }
 
-  const mailer = getTransporter();
-  try {
-    return await mailer.sendMail({
-      from:
-        process.env.MAIL_FROM ||
-        process.env.SMTP_FROM ||
-        process.env.SMTP_USER,
-      to,
-      subject,
-      text,
-      html,
-      ...(replyTo ? { replyTo } : {}),
-    });
-  } catch (error) {
-    error.retryable =
-      !Number.isInteger(error.responseCode) ||
-      (error.responseCode >= 400 && error.responseCode < 500);
-    error.code = error.code || "SMTP_SEND_FAILED";
-    error.outcomeUnknown =
-      !Number.isInteger(error.responseCode) && error.command === "DATA";
-    const details = getEmailTransportErrorDetails(error);
-    error.statusCode = 503;
-    error.message = details.message;
-    throw error;
+  const { RESEND_API_KEY, EMAIL_FROM } = process.env;
+  if (!isTransactionalEmailConfigured()) {
+    throw createEmailError(
+      "Email delivery is not configured.",
+      "RESEND_CONFIG_MISSING",
+      503
+    );
   }
-};
 
-export const verifyEmailTransport = async () => {
-  const mailer = getTransporter();
+  const client = new Resend(RESEND_API_KEY.trim(), {
+    baseUrl: RESEND_API_URL,
+  });
+  client.debug = false;
   try {
-    await mailer.verify();
+    const { data, error } = await client.emails.send(
+      {
+        from: EMAIL_FROM.trim(),
+        to,
+        subject,
+        ...(text !== undefined ? { text } : {}),
+        ...(html !== undefined ? { html } : {}),
+        ...(replyTo ? { replyTo } : {}),
+      },
+      {
+        signal: AbortSignal.timeout(EMAIL_REQUEST_TIMEOUT_MS),
+        ...(idempotencyKey ? { idempotencyKey } : {}),
+      }
+    );
+
+    if (error) {
+      const statusCode = Number.isInteger(error.statusCode)
+        ? error.statusCode
+        : null;
+      const retryable = statusCode === 429 || statusCode >= 500;
+      const outcomeUnknown = statusCode === null;
+      const failure = createEmailError(
+        statusCode === 401
+          ? "Resend rejected the API key. Check that the key is active and belongs to this account."
+          : statusCode === 403
+            ? "Resend rejected the sender or recipient. Use a verified sending domain; the test sender can only send to your own address."
+          : statusCode === 429
+            ? "Email provider rate limit reached."
+            : outcomeUnknown
+              ? "Email provider response could not be confirmed."
+              : "Email provider rejected the request.",
+        statusCode === 401
+          ? "RESEND_API_KEY_INVALID"
+          : statusCode === 403
+            ? "RESEND_SENDER_REJECTED"
+          : statusCode === 429
+            ? "RESEND_RATE_LIMITED"
+            : statusCode >= 500
+              ? "RESEND_PROVIDER_UNAVAILABLE"
+              : outcomeUnknown
+                ? "RESEND_OUTCOME_UNKNOWN"
+                : "RESEND_REQUEST_REJECTED",
+        503,
+        retryable
+      );
+      failure.outcomeUnknown = outcomeUnknown;
+      failure.providerStatusCode = statusCode;
+      throw failure;
+    }
+
+    if (typeof data?.id !== "string" || !data.id.trim()) {
+      throw createEmailError(
+        "Email provider returned an invalid response.",
+        "RESEND_RESPONSE_INVALID",
+        503
+      );
+    }
+
+    console.info(
+      JSON.stringify({
+        event: "email.send.accepted",
+        provider: "resend",
+        messageId: data.id,
+      })
+    );
+    return {
+      accepted: true,
+      messageId: data.id,
+    };
   } catch (error) {
-    error.code = error.code || "SMTP_VERIFY_FAILED";
-    throw error;
+    const safeError =
+      error?.code && error?.statusCode
+        ? error
+        : createEmailError(
+            "Email provider request failed.",
+            "RESEND_NETWORK_ERROR",
+            503
+          );
+    if (!safeError.code) safeError.code = "RESEND_NETWORK_ERROR";
+    if (!safeError.statusCode) safeError.statusCode = 503;
+    if (safeError.retryable !== true) safeError.retryable = false;
+    if (safeError.code === "RESEND_NETWORK_ERROR") {
+      safeError.outcomeUnknown = true;
+    }
+    console.error(
+      JSON.stringify({
+        event: "email.send.failed",
+        provider: "resend",
+        ...getEmailDeliveryErrorDetails(safeError),
+      })
+    );
+    throw safeError;
   }
 };

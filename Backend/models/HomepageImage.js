@@ -4,7 +4,7 @@ const homepageImageSchema = new mongoose.Schema(
   {
     section: {
       type: String,
-      enum: ["hero", "category", "editorial", "atelier"],
+      enum: ["hero", "category", "editorial", "atelier", "social"],
       required: true,
       index: true,
     },

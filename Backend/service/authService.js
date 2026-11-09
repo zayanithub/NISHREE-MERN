@@ -4,9 +4,10 @@ import crypto from "node:crypto";
 import mongoose from "mongoose";
 import { enqueueCustomerDeliveries } from "./notificationDeliveryService.js";
 import {
-  getEmailTransportErrorDetails,
+  getEmailDeliveryErrorDetails,
   renderBrandedEmail,
   sendTransactionalEmail,
+  sendVerificationCodeEmail,
 } from "./emailService.js";
 
 import User from "../models/User.js";
@@ -21,6 +22,7 @@ const REFRESH_TOKEN_DAYS = Number(
   process.env.JWT_REFRESH_EXPIRES_IN?.replace("d", "") || 7
 );
 const OTP_TTL_MS = 10 * 60 * 1000;
+const OTP_RESEND_COOLDOWN_MS = 60 * 1000;
 const PASSWORD_RESET_TTL_MS = 15 * 60 * 1000;
 const MAX_OTP_ATTEMPTS = 5;
 
@@ -42,6 +44,35 @@ const createError = (message, statusCode) => {
   const error = new Error(message);
   error.statusCode = statusCode;
   return error;
+};
+
+const deliverUserOtp = async ({ email, otp, purpose, challengeId }) => {
+  const isPasswordReset = purpose === "password_reset";
+  const isGoogleLogin = purpose === "google_login";
+  const subject = isPasswordReset
+    ? "Reset your Nishree Attire password"
+    : isGoogleLogin
+      ? "Your Nishree Attire sign-in code"
+      : "Verify your Nishree Attire email";
+  const text = `Your Nishree Attire ${isGoogleLogin ? "sign-in" : "verification"} code is ${otp}. It expires in 10 minutes. Never share this code with anyone. If you did not request this code, you can ignore this email.`;
+  await sendVerificationCodeEmail({
+    to: email,
+    otp,
+    purpose,
+    challengeId,
+    otpHash: hashOtp(challengeId, purpose, otp),
+    subject,
+    text,
+    title: isPasswordReset
+      ? "Reset your password"
+      : isGoogleLogin
+        ? "Confirm your sign-in"
+        : "Verify your email address",
+    preheader: "Your secure Nishree Attire verification code.",
+    body: isGoogleLogin
+      ? "Enter this code to finish signing in. It expires in 10 minutes."
+      : "Enter this code to continue. It expires in 10 minutes.",
+  });
 };
 
 const createOtpChallenge = async ({ user = null, email, purpose }) => {
@@ -73,28 +104,7 @@ const createOtpChallenge = async ({ user = null, email, purpose }) => {
 
   if (user) {
     try {
-      const subject =
-        purpose === "password_reset"
-          ? "Reset your Nishree Attire password"
-          : purpose === "email_verification"
-            ? "Verify your Nishree Attire email"
-            : "Your Nishree Attire sign-in code";
-      const text = `Your Nishree Attire verification code is ${otp}. It expires in 10 minutes. Never share this code with anyone. If you did not request this code, you can ignore this email.`;
-      await sendTransactionalEmail({
-        to: email,
-        subject,
-        text,
-        html: renderBrandedEmail({
-          title: purpose === "password_reset"
-            ? "Reset your password"
-            : purpose === "email_verification"
-              ? "Verify your email address"
-              : "Sign in securely",
-          preheader: "Your secure Nishree Attire verification code.",
-          body: "Enter this code to continue. It expires in 10 minutes.",
-          otp,
-        }),
-      });
+      await deliverUserOtp({ email, otp, purpose, challengeId });
     } catch (error) {
       await OTPVerification.updateOne(
         { _id: challengeId, consumedAt: null },
@@ -111,6 +121,195 @@ const createOtpChallenge = async ({ user = null, email, purpose }) => {
   }
 
   return String(challengeId);
+};
+
+export const resendUserRegistrationOtp = async ({ challengeId }) => {
+  if (!mongoose.isValidObjectId(challengeId)) {
+    throw createError("The verification request is invalid or has expired.", 400);
+  }
+
+  const now = new Date();
+  const challenge = await OTPVerification.findOne({
+    _id: challengeId,
+    purpose: "email_verification",
+    verifiedAt: null,
+    consumedAt: null,
+    revokedAt: null,
+  });
+  if (!challenge) {
+    throw createError("The verification request is invalid or has expired.", 400);
+  }
+  if (now.getTime() - challenge.updatedAt.getTime() < OTP_RESEND_COOLDOWN_MS) {
+    throw createError("Please wait before requesting another code.", 429);
+  }
+
+  const user = await User.findById(challenge.user);
+  if (!user || user.isEmailVerified || user.status !== "active") {
+    throw createError("This account is not available for verification.", 403);
+  }
+
+  const otp = crypto.randomInt(0, 1_000_000).toString().padStart(6, "0");
+  const updated = await OTPVerification.findOneAndUpdate(
+    {
+      _id: challenge._id,
+      purpose: "email_verification",
+      verifiedAt: null,
+      consumedAt: null,
+      revokedAt: null,
+      attempts: challenge.attempts,
+      updatedAt: challenge.updatedAt,
+    },
+    {
+      $set: {
+        otpHash: hashOtp(challenge._id, "email_verification", otp),
+        expiresAt: new Date(Date.now() + OTP_TTL_MS),
+        attempts: 0,
+        updatedAt: now,
+      },
+    },
+    { returnDocument: "after" }
+  );
+  if (!updated) {
+    throw createError("The verification request is invalid or has expired.", 400);
+  }
+
+  try {
+    await deliverUserOtp({
+      email: user.email,
+      otp,
+      purpose: "email_verification",
+      challengeId: challenge._id,
+    });
+  } catch (error) {
+    await OTPVerification.updateOne(
+      { _id: challenge._id, consumedAt: null },
+      { $set: { revokedAt: new Date() } }
+    );
+    const deliveryError = createError(
+      "Verification code email could not be sent. Please try again later.",
+      503
+    );
+    deliveryError.code = "OTP_EMAIL_DELIVERY_FAILED";
+    deliveryError.cause = error;
+    throw deliveryError;
+  }
+
+  return { challengeId: String(challenge._id), otpRequired: true };
+};
+
+export const createGoogleLoginChallenge = async (user) =>
+  createOtpChallenge({
+    user,
+    email: user.email,
+    purpose: "google_login",
+  });
+
+const maskEmail = (email) => {
+  const [name, domain] = email.split("@");
+  const visible = name.length > 2 ? name.slice(0, 2) : name.slice(0, 1);
+  return `${visible}${"*".repeat(Math.max(3, name.length - visible.length))}@${domain}`;
+};
+
+const findGoogleLoginChallenge = async (challengeId) => {
+  if (!mongoose.isValidObjectId(challengeId)) {
+    throw createError("The verification request is invalid or has expired.", 400);
+  }
+
+  const challenge = await OTPVerification.findOne({
+    _id: challengeId,
+    purpose: "google_login",
+    expiresAt: { $gt: new Date() },
+    verifiedAt: null,
+    consumedAt: null,
+    revokedAt: null,
+    attempts: { $lt: MAX_OTP_ATTEMPTS },
+  });
+  if (!challenge) {
+    throw createError("The verification request is invalid or has expired.", 400);
+  }
+
+  return challenge;
+};
+
+export const getGoogleLoginChallenge = async ({ challengeId }) => {
+  const challenge = await findGoogleLoginChallenge(challengeId);
+  return {
+    maskedEmail: maskEmail(challenge.destination),
+    expiresAt: challenge.expiresAt,
+    resendAvailableAt: new Date(
+      challenge.updatedAt.getTime() + OTP_RESEND_COOLDOWN_MS
+    ),
+  };
+};
+
+export const resendGoogleLoginOtp = async ({ challengeId }) => {
+  const challenge = await findGoogleLoginChallenge(challengeId);
+  const now = new Date();
+  if (now.getTime() - challenge.updatedAt.getTime() < OTP_RESEND_COOLDOWN_MS) {
+    throw createError("Please wait before requesting another code.", 429);
+  }
+
+  const user = await User.findById(challenge.user);
+  if (
+    !user ||
+    (user.status && user.status !== "active") ||
+    user.email !== challenge.destination
+  ) {
+    throw createError("This account is not available for verification.", 403);
+  }
+
+  const otp = crypto.randomInt(0, 1_000_000).toString().padStart(6, "0");
+  const updated = await OTPVerification.findOneAndUpdate(
+    {
+      _id: challenge._id,
+      purpose: "google_login",
+      expiresAt: { $gt: now },
+      verifiedAt: null,
+      consumedAt: null,
+      revokedAt: null,
+      attempts: challenge.attempts,
+      updatedAt: challenge.updatedAt,
+    },
+    {
+      $set: {
+        otpHash: hashOtp(challenge._id, "google_login", otp),
+        expiresAt: new Date(now.getTime() + OTP_TTL_MS),
+        attempts: 0,
+        updatedAt: now,
+      },
+    },
+    { returnDocument: "after" }
+  );
+  if (!updated) {
+    throw createError("The verification request is invalid or has expired.", 400);
+  }
+
+  try {
+    await deliverUserOtp({
+      email: user.email,
+      otp,
+      purpose: "google_login",
+      challengeId: challenge._id,
+    });
+  } catch (error) {
+    await OTPVerification.updateOne(
+      { _id: challenge._id, consumedAt: null },
+      { $set: { revokedAt: new Date() } }
+    );
+    const deliveryError = createError(
+      "Verification code email could not be sent. Please try again later.",
+      503
+    );
+    deliveryError.code = "OTP_EMAIL_DELIVERY_FAILED";
+    deliveryError.cause = error;
+    throw deliveryError;
+  }
+
+  return {
+    challengeId: String(challenge._id),
+    expiresAt: updated.expiresAt,
+    resendAvailableAt: new Date(now.getTime() + OTP_RESEND_COOLDOWN_MS),
+  };
 };
 
 const claimOtpChallenge = async ({ challengeId, otp, purpose }) => {
@@ -288,23 +487,17 @@ export const loginUser = async ({ email, password }) => {
     throw error;
   }
 
-  return {
-    challengeId: await createOtpChallenge({
-      user,
-      email: user.email,
-      purpose: "login",
-    }),
-    otpRequired: true,
-  };
-};
+  if (!user.isEmailVerified) {
+    throw createError(
+      "Please verify your email address before signing in.",
+      403
+    );
+  }
 
-export const verifyUserLogin = async ({ challengeId, otp }) => {
-  const challenge = await claimOtpChallenge({
-    challengeId,
-    otp,
-    purpose: "login",
-  });
-  return establishUserSession(challenge.user);
+  user.lastLoginAt = new Date();
+  await user.save();
+  const session = await createSession(user);
+  return { user: publicUser(user), ...session };
 };
 
 export const verifyUserEmail = async ({ challengeId, otp }) => {
@@ -312,6 +505,15 @@ export const verifyUserEmail = async ({ challengeId, otp }) => {
     challengeId,
     otp,
     purpose: "email_verification",
+  });
+  return establishUserSession(challenge.user);
+};
+
+export const verifyGoogleLoginOtp = async ({ challengeId, otp }) => {
+  const challenge = await claimOtpChallenge({
+    challengeId,
+    otp,
+    purpose: "google_login",
   });
   return establishUserSession(challenge.user);
 };
@@ -414,7 +616,7 @@ export const resetUserPassword = async ({ resetToken, password }) => {
     emailSent = false;
     console.error(
       "Password reset confirmation email failed:",
-      getEmailTransportErrorDetails(error)
+      getEmailDeliveryErrorDetails(error)
     );
   }
   return { success: true, emailSent };

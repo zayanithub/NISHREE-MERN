@@ -11,8 +11,10 @@ export default function StorefrontLayout() {
   const location = useLocation();
   const [revealDone, setRevealDone] = useState(false);
   const [initialPath] = useState(() => typeof window !== 'undefined' ? window.location.pathname : '/');
-  const initialHome = initialPath === '/';
-  const showShoppingAssistant = !['/login', '/register', '/forgot-password'].includes(location.pathname);
+  const initialHome = initialPath === '/' || initialPath === '/home';
+  const isAuthPage = ['/login', '/register', '/forgot-password'].includes(location.pathname);
+  const isJournalRoute = location.pathname === '/blogs' || location.pathname.startsWith('/blogs/');
+  const showShoppingAssistant = !isAuthPage;
 
   useEffect(() => {
     if (location.hash) {
@@ -26,7 +28,7 @@ export default function StorefrontLayout() {
   return <>
     <a className="skip-link" href="#main-content">Skip to content</a>
     <SiteHeader />
-    <main id="main-content" className="storefront-main"><BackNavigation /><Outlet /></main>
+    <main id="main-content" className="storefront-main">{!isAuthPage && !isJournalRoute && <BackNavigation />}<Outlet /></main>
     <SiteFooter />
     <CartDrawer />
     {showShoppingAssistant && <ShoppingAssistant />}

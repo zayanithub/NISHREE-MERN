@@ -9,7 +9,7 @@ import OTPVerification from "../models/OTPVerification.js";
 
 import "../models/Role.js";
 import "../models/Permission.js";
-import { renderBrandedEmail, sendTransactionalEmail } from "./emailService.js";
+import { sendVerificationCodeEmail } from "./emailService.js";
 
 const ACCESS_TOKEN_TTL =
   process.env.JWT_ACCESS_EXPIRES_IN || "15m";
@@ -44,9 +44,18 @@ const createError = (message, statusCode) => {
   return error;
 };
 
+const hasActiveRole = (admin) =>
+  Boolean(admin?.role && admin.role.isActive === true);
+
+const maskEmail = (email) => {
+  const [localPart, domain] = String(email).split("@");
+  if (!localPart || !domain) return "invalid";
+  return `${localPart[0]}***@${domain}`;
+};
+
 const normalizeOtpDeliveryError = (error) => {
   error.statusCode = 503;
-  error.message = error.code === "SMTP_CONFIG_MISSING"
+  error.message = error.code === "RESEND_CONFIG_MISSING"
     ? "Admin OTP email delivery is not configured."
     : "Admin OTP email could not be delivered. Please try again.";
   return error;
@@ -138,6 +147,7 @@ const validateAdminCredentials = async ({ email, password }) => {
     .select("+passwordHash")
     .populate({
       path: "role",
+      select: "name isActive permissions",
       populate: {
         path: "permissions",
         select: "name resource action description",
@@ -169,21 +179,26 @@ const validateAdminCredentials = async ({ email, password }) => {
     throw error;
   }
 
+  if (!hasActiveRole(admin)) {
+    throw createError("This admin account does not have an active role.", 403);
+  }
+
   return admin;
 };
 
-const deliverAdminLoginOtp = async (email, otp) => {
+const deliverAdminLoginOtp = async (email, otp, challengeId) => {
   const text = `Your Nishree Attire admin verification code is ${otp}. It expires in 10 minutes. Never share this code with anyone. If you did not request this code, secure your admin account immediately.`;
-  await sendTransactionalEmail({
+  return sendVerificationCodeEmail({
     to: email,
+    otp,
+    purpose: "admin_login",
+    challengeId,
+    otpHash: hashOtp(challengeId, otp),
     subject: "Your Nishree Attire admin sign-in code",
     text,
-    html: renderBrandedEmail({
-      title: "Verify your admin sign-in",
-      preheader: "Your secure Nishree Attire admin verification code.",
-      body: "Enter this code to finish signing in to the admin portal. It expires in 10 minutes.",
-      otp,
-    }),
+    title: "Verify your admin sign-in",
+    preheader: "Your secure Nishree Attire admin verification code.",
+    body: "Enter this code to finish signing in to the admin portal. It expires in 10 minutes.",
   });
 };
 
@@ -214,7 +229,17 @@ export const loginAdmin = async (credentials) => {
   });
 
   try {
-    await deliverAdminLoginOtp(admin.email, otp);
+    const delivery = await deliverAdminLoginOtp(
+      admin.email,
+      otp,
+      challengeId
+    );
+    console.info(JSON.stringify({
+      event: "admin.otp.email.accepted",
+      challengeId: String(challengeId),
+      messageId: delivery.messageId,
+      destination: maskEmail(admin.email),
+    }));
   } catch (error) {
     await OTPVerification.updateOne(
       { _id: challengeId, consumedAt: null },
@@ -259,7 +284,7 @@ export const resendAdminLoginOtp = async ({ challengeId }) => {
       select: "name resource action description",
     },
   });
-  if (!admin || admin.status !== "active") {
+  if (!admin || admin.status !== "active" || !hasActiveRole(admin)) {
     throw createError("This admin account is not available.", 403);
   }
 
@@ -290,7 +315,18 @@ export const resendAdminLoginOtp = async ({ challengeId }) => {
   }
 
   try {
-    await deliverAdminLoginOtp(admin.email, otp);
+    const delivery = await deliverAdminLoginOtp(
+      admin.email,
+      otp,
+      challenge._id
+    );
+    console.info(JSON.stringify({
+      event: "admin.otp.email.accepted",
+      challengeId: String(challenge._id),
+      messageId: delivery.messageId,
+      destination: maskEmail(admin.email),
+      resend: true,
+    }));
   } catch (error) {
     await OTPVerification.updateOne(
       { _id: challenge._id, consumedAt: null },
@@ -361,7 +397,7 @@ export const verifyAdminLoginOtp = async ({ challengeId, otp }) => {
       select: "name resource action description",
     },
   });
-  if (!admin || admin.status !== "active") {
+  if (!admin || admin.status !== "active" || !hasActiveRole(admin)) {
     throw createError("This admin account is not available.", 403);
   }
 
@@ -418,7 +454,7 @@ export const refreshAdminSession = async (
     },
   });
 
-  if (!admin || admin.status !== "active") {
+  if (!admin || admin.status !== "active" || !hasActiveRole(admin)) {
     const error = new Error(
       "Admin account is not available"
     );
@@ -537,7 +573,7 @@ export const getCurrentAdmin = async (adminId) => {
     },
   });
 
-  if (!admin || admin.status !== "active") {
+  if (!admin || admin.status !== "active" || !hasActiveRole(admin)) {
     const error = new Error(
       "Admin account is not available"
     );

@@ -4,6 +4,7 @@ import {
   setPrimaryProductImage as setPrimaryProductImageService,
   deleteProductImage as deleteProductImageService,
   removePrimaryProductImage as removePrimaryProductImageService,
+  reorderProductImages as reorderProductImagesService,
 } from "../service/productImageService.js";
 
 /*
@@ -109,6 +110,30 @@ export const setPrimaryProductImageController = async (
       success: true,
       message: "Primary product image updated successfully.",
       image,
+    });
+  } catch (error) {
+    return next(error);
+  }
+};
+
+export const reorderProductImagesController = async (req, res, next) => {
+  try {
+    if (!req.admin?.adminId) {
+      return res.status(401).json({
+        success: false,
+        message: "Admin authentication required.",
+      });
+    }
+
+    const images = await reorderProductImagesService(
+      req.params.productId,
+      req.body?.imageIds,
+      req.admin.adminId
+    );
+    return res.status(200).json({
+      success: true,
+      message: "Product image order updated successfully.",
+      images,
     });
   } catch (error) {
     return next(error);

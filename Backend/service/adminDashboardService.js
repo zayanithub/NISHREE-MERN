@@ -2,6 +2,7 @@ import ExchangeRequest from "../models/ExchangeRequest.js";
 import Inventory from "../models/Inventory.js";
 import Order from "../models/Order.js";
 import Payment from "../models/Payment.js";
+import { eligibleSalesMatch as buildEligibleSalesMatch } from "./salesPolicy.js";
 import Product from "../models/Product.js";
 import ProductReview from "../models/ProductReview.js";
 import ReturnRequest from "../models/ReturnRequest.js";
@@ -39,13 +40,8 @@ const getPeriodBounds = (period, now = new Date()) => {
   return { start, end, days };
 };
 
-const eligibleSalesMatch = (start, end) => ({
-  createdAt: { $gte: start, $lte: end },
-  $or: [
-    { paymentStatus: { $in: ["paid", "partially_refunded"] } },
-    { paymentMethod: "cod", orderStatus: "delivered" },
-  ],
-});
+const eligibleSalesMatch = (start, end) =>
+  buildEligibleSalesMatch(start, end);
 
 const salesPipeline = (start, end) => [
   { $match: eligibleSalesMatch(start, end) },

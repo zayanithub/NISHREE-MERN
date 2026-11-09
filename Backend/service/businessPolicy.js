@@ -1,5 +1,5 @@
 export const COD_ORDER_LIMIT = 2000;
-export const RETURN_EXCHANGE_WINDOW_DAYS = 5;
+export const RETURN_EXCHANGE_WINDOW_DAYS = 7;
 
 export const isCodEligible = (totalAmount) =>
   Number.isFinite(Number(totalAmount)) &&

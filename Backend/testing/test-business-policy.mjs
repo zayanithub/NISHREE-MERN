@@ -12,6 +12,6 @@ test('Cash on Delivery is available through ₹2,000 and blocked above the limit
   assert.equal(isCodEligible(Number.NaN), false);
 });
 
-test('return and exchange request windows remain five days', () => {
-  assert.equal(RETURN_EXCHANGE_WINDOW_DAYS, 5);
+test('return and exchange request windows match the published seven-day policy', () => {
+  assert.equal(RETURN_EXCHANGE_WINDOW_DAYS, 7);
 });

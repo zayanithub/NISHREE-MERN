@@ -6,6 +6,7 @@ import {
   setPrimaryProductImageController,
   deleteProductImageController,
   removePrimaryProductImageController,
+  reorderProductImagesController,
 } from "../../controllers/productImageController.js";
 
 import adminAuthMiddleware from "../../middlewares/adminAuthMiddleware.js";
@@ -72,6 +73,12 @@ router.patch(
   "/:productId/images/:imageId/primary",
   requirePermission("products", "update"),
   setPrimaryProductImageController
+);
+
+router.patch(
+  "/:productId/images/order",
+  requirePermission("products", "update"),
+  reorderProductImagesController
 );
 
 /*

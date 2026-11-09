@@ -35,10 +35,10 @@ export const submitContactMessageController = async (req, res, next) => {
 
     return res.status(200).json({
       success: true,
-      message: "Your message has been sent. Our team will be in touch.",
+      message: "Your message has been submitted. Our team will be in touch.",
     });
   } catch (error) {
-    if (error.code === "SMTP_CONFIG_MISSING") {
+    if (error.code === "RESEND_CONFIG_MISSING") {
       error.statusCode = 503;
       error.message = "Contact email delivery is not configured. Please use the listed support contact.";
     }

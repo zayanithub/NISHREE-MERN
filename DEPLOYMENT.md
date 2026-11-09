@@ -28,13 +28,11 @@ Set or verify these environment variables in the Render service. Enter secrets d
 | `MONGO_URL` | Existing production MongoDB URI; do not replace the database |
 | `JWT_ACCESS_SECRET` | A private random secret, at least 32 bytes. Rotating it signs out active users. |
 | `COOKIE_SAME_SITE` | `lax` |
-| `SMTP_HOST` | Your configured SMTP host (for Gmail, `smtp.gmail.com`) |
-| `SMTP_PORT` | `465` for implicit TLS, or the port specified by your SMTP provider |
-| `SMTP_SECURE` | `true` for port 465; otherwise match the provider's TLS setup |
-| `SMTP_USER` | Verified sender account |
-| `SMTP_PASS` | Valid SMTP credential/app password; do not use an account's normal password |
-| `MAIL_FROM` | Optional verified sender; defaults to `SMTP_USER` |
-| `SMTP_FROM` | Optional sender alias accepted when `MAIL_FROM` is unset; `MAIL_FROM` takes precedence |
+| `GOOGLE_CLIENT_ID` | OAuth 2.0 Web application client ID from Google Cloud |
+| `GOOGLE_CLIENT_SECRET` | Backend-only Google OAuth client secret; never add to Vercel or a `VITE_` variable |
+| `GOOGLE_CALLBACK_URL` | `https://nishree.in/api/v1/auth/google/callback` (same-origin Vercel API proxy) |
+| `RESEND_API_KEY` | Backend-only Resend API key with email-sending permission |
+| `EMAIL_FROM` | `onboarding@resend.dev` for supported tests, or an address at your verified production domain |
 | `CLOUDINARY_CLOUD_NAME` | Cloudinary cloud name, required for persistent uploads |
 | `CLOUDINARY_API_KEY` | Cloudinary API key |
 | `CLOUDINARY_API_SECRET` | Cloudinary API secret |
@@ -43,6 +41,8 @@ Set or verify these environment variables in the Render service. Enter secrets d
 | `RAZORPAY_WEBHOOK_SECRET` | The same webhook signing secret configured in Razorpay |
 
 Keep the existing production values for credentials and optional notification providers. Do not copy example or test values over working production settings. Render supplies `PORT`; do not hardcode a different port.
+
+Create a Google OAuth 2.0 **Web application** client and add the exact production callback URL from `GOOGLE_CALLBACK_URL` to its authorized redirect URIs. Use the storefront's same-origin `/api/v1` proxy for the production callback so the OAuth state cookie is set and returned on the same host; the Vercel rewrite forwards the callback to Render. Set all three Google variables in Render. For local development, use `http://localhost:5000/api/v1/auth/google/callback` as the callback and configure the local frontend origin in `FRONTEND_URL`. The API handles the authorization code exchange and Google ID-token verification; the client secret must never be exposed to the browser. After Google verifies an account identity, the customer must also verify a one-time code sent through the existing Resend HTTPS API before an application session is issued.
 
 ### Fix `JWT_ACCESS_SECRET must contain at least 32 bytes`
 
@@ -66,17 +66,17 @@ https://nishree-mern-backend.onrender.com/api/health
 
 It should return HTTP 200 and `"database":"Connected"`.
 
-### Login OTP troubleshooting
+### Email OTP troubleshooting
 
-Customer and administrator sign-in send a one-time email code after credentials are validated. If SMTP authentication or delivery fails, the login cannot complete even while MongoDB and `/api/health` are healthy. Check Render logs at the time of the attempt and confirm `SMTP_HOST`, `SMTP_PORT`, `SMTP_SECURE`, `SMTP_USER`, and `SMTP_PASS` are correct for the sender. A Gmail sender generally needs a Google app password with 2-step verification enabled. Never paste SMTP credentials into a support chat or browser-visible variable.
+Customer signup, Google sign-in, and administrator sign-in send a one-time email code. Normal customer sign-in with email and password uses no additional OTP. If Resend authentication or request acceptance fails for a signup, Google sign-in, or admin OTP, that flow cannot complete even while MongoDB and `/api/health` are healthy. Check the backend's Resend API key, sender verification, recipient restrictions, and quota in Render's environment and the Resend dashboard. Never paste the API key into a support chat or browser-visible variable. A Resend API acceptance is not proof of inbox delivery.
 
-The API returns HTTP 503 with a retryable message when the customer OTP email cannot be delivered; the failed OTP challenge is revoked. Invalid credentials should return 401, and malformed login input should return 400.
+The API returns HTTP 503 when a signup or admin OTP email cannot be delivered; the failed OTP challenge is revoked. Check the backend log event `email.send.failed` for the sanitized provider status: `RESEND_API_KEY_INVALID` with provider HTTP 401 means the API key is invalid/inactive, while `RESEND_SENDER_REJECTED` with provider HTTP 403 usually means the sender domain is unverified or the recipient is not permitted. The Resend test sender `onboarding@resend.dev` only allows sending to your own Resend account email. Customer signup verification and admin sign-in require a verified domain for arbitrary recipients; a public mailbox sender such as Gmail is not supported. Update both values in Render, then restart/redeploy. Invalid credentials should return 401, and malformed login input should return 400.
 
-### SMTP connectivity diagnostics
+### Resend API diagnostics
 
-An HTTP health check confirms the API and database, not SMTP delivery. In the Render service's shell or a staging instance with the same network policy, run `npm run smtp:diagnose` from `Backend` (the configured service root). It reports DNS, TCP, greeting, TLS, and Nodemailer verification/authentication independently without printing SMTP credentials or sending mail. A TCP timeout points to egress/firewall/provider reachability; `ENOTFOUND` points to DNS; TLS/certificate errors point to TLS settings or trust; `EAUTH` or an SMTP 535 response points to credentials/provider authorization. A local sandbox's network result does not establish Render's network behavior.
+An HTTP health check confirms the API and database, not email provider connectivity. Run `npm run resend:diagnose` from `Backend` to check only whether the key and sender are configured. For an explicit staging-only email test, set `RESEND_DIAGNOSTIC_ENV=staging` and `RESEND_DIAGNOSTIC_TO` to a dedicated test inbox, then run `npm run resend:diagnose -- --send-test-email`. The script never prints credentials; a successful response confirms Resend accepted the request, not that it reached the inbox. Check the recipient mailbox and Resend message logs separately.
 
-Only send a real diagnostic message from staging, to a dedicated test inbox, after configuring `SMTP_DIAGNOSTIC_ENV=staging` and `SMTP_DIAGNOSTIC_TO`; run `npm run smtp:diagnose -- --send-test-email`. The script requires this explicit opt-in and reports SMTP relay acceptance, which does not guarantee inbox delivery. Check the recipient mailbox and provider logs separately. Never test with a customer address or production order.
+The Resend Free transactional plan currently allows 3,000 emails per month and 100 per day (including inbound email usage), with a 10-requests-per-second team rate limit. HTTP 429 and provider 5xx failures are retried by the existing notification worker with bounded backoff; permanent errors are not. Confirm current quotas in the Resend dashboard before rollout.
 
 ## 2. Vercel storefront
 
@@ -104,7 +104,7 @@ After both services are ready:
 2. Open `https://nishree.in/login`, a collection URL, a product URL, and `/admin/login` directly, then refresh each. Expect the storefront to load, not a hosting 404/503.
 3. In browser developer tools, confirm API calls use `https://nishree.in/api/v1/...`, not localhost or a direct cross-site API hostname.
 4. Confirm product images load and the browser has no CORS or failed-request errors.
-5. Test customer/admin OTP with authorized test accounts and inboxes. Do not create real orders, refunds, or inventory changes as a connectivity test.
+5. Test signup/admin OTP with authorized test accounts and inboxes, and test customer login with email/password only. Do not create real orders, refunds, or inventory changes as a connectivity test.
 6. Only test payment-provider callbacks with the provider's test mode and a controlled test order.
 
 The deployed API's `OPTIONS` preflight should allow `https://nishree.in` with credentials and the requested authorization/content headers. Keep Render `FRONTEND_URL` aligned with that exact origin.

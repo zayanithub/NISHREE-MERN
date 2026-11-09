@@ -109,7 +109,7 @@ const storeSettingsSchema = new mongoose.Schema(
 
     returnWindowDays: {
       type: Number,
-      default: 5,
+      default: 7,
       min: 1,
       max: 60,
       validate: {
@@ -126,7 +126,7 @@ const storeSettingsSchema = new mongoose.Schema(
 
     exchangeWindowDays: {
       type: Number,
-      default: 5,
+      default: 7,
       min: 1,
       max: 60,
       validate: {

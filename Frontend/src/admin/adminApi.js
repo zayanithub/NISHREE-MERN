@@ -41,6 +41,15 @@ http.interceptors.response.use((response) => response, async (error) => {
 });
 
 const data = (request) => request.then((response) => response.data);
+const createBlogPayload = (fields, image) => {
+  const form = new FormData();
+  for (const [key, value] of Object.entries(fields)) {
+    if (['contentBlocks', 'tags'].includes(key)) form.append(key, JSON.stringify(value));
+    else form.append(key, value == null ? '' : String(value));
+  }
+  if (image) form.append('image', image);
+  return form;
+};
 
 export const adminApi = {
   login: (body) => data(http.post('/auth/login', body)),
@@ -52,14 +61,16 @@ export const adminApi = {
   overview: (params = {}) => data(http.get('/dashboard/overview', { params })).then((result) => result.data),
   sales: (params = {}) => data(http.get('/dashboard/sales', { params })).then((result) => result.data),
   products: (params = {}) => data(http.get('/products', { params })),
+  productImageCompletion: (params = {}) => data(http.get('/products/image-completion', { params })),
   product: (id) => data(http.get(`/products/${id}`)).then((result) => result.product),
   createProduct: (body) => data(http.post('/products', body)).then((result) => result.product),
   updateProduct: (id, body) => data(http.patch(`/products/${id}`, body)).then((result) => result.product),
   updateProductStatus: (id, status) => data(http.patch(`/products/${id}/status`, { status })),
   deleteProduct: (id) => data(http.delete(`/products/${id}`)),
-  uploadProductImages: (id, formData) => data(http.post(`/products/${id}/images`, formData, { headers: { 'Content-Type': 'multipart/form-data' } })),
+  uploadProductImages: (id, formData, onUploadProgress) => data(http.post(`/products/${id}/images`, formData, { headers: { 'Content-Type': 'multipart/form-data' }, timeout: 120000, onUploadProgress })),
   productImages: (id) => data(http.get(`/products/${id}/images`)).then((result) => result.images || []),
   setPrimaryProductImage: (productId, imageId) => data(http.patch(`/products/${productId}/images/${imageId}/primary`)),
+  reorderProductImages: (productId, imageIds) => data(http.patch(`/products/${productId}/images/order`, { imageIds })).then((result) => result.images || []),
   deleteProductImage: (productId, imageId) => data(http.delete(`/products/${productId}/images/${imageId}`)),
   removePrimaryProductImage: (productId) => data(http.delete(`/products/${productId}/primary-image`)),
   categories: (params = {}) => data(http.get('/categories', { params })),
@@ -88,6 +99,16 @@ export const adminApi = {
   updateHomepageImage: (id, formData) => data(http.patch(`/homepage-images/${id}`, formData, { headers: { 'Content-Type': 'multipart/form-data' }, timeout: 120000 })),
   reorderHomepageImages: (body) => data(http.patch('/homepage-images/reorder', body)).then((result) => result.images),
   deleteHomepageImage: (id) => data(http.delete(`/homepage-images/${id}`)),
+  blogPosts: (params = {}) => data(http.get('/blogs', { params })),
+  blogPost: (id) => data(http.get(`/blogs/${id}`)).then((result) => result.post),
+  uploadBlogMedia: (image) => {
+    const form = new FormData();
+    form.append('image', image);
+    return data(http.post('/blogs/media', form, { headers: { 'Content-Type': 'multipart/form-data' }, timeout: 120000 })).then((result) => result.image);
+  },
+  createBlogPost: (body, image) => data(http.post('/blogs', createBlogPayload(body, image), { headers: { 'Content-Type': 'multipart/form-data' }, timeout: 120000 })).then((result) => result.post),
+  updateBlogPost: (id, body, image) => data(http.patch(`/blogs/${id}`, createBlogPayload(body, image), { headers: { 'Content-Type': 'multipart/form-data' }, timeout: 120000 })).then((result) => result),
+  deleteBlogPost: (id) => data(http.delete(`/blogs/${id}`)),
   coupons: (params = {}) => data(http.get('/coupons', { params })).then((result) => result.data),
   createCoupon: (body) => data(http.post('/coupons', body)).then((result) => result.data.coupon),
   updateCoupon: (id, body) => data(http.patch(`/coupons/${id}`, body)).then((result) => result.data.coupon),

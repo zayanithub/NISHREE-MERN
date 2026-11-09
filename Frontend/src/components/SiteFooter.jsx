@@ -9,24 +9,13 @@ const exploreLinks = [
   ['New arrivals', '/shop?sort=newest'],
   ['About us', '/about'],
   ['Contact us', '/contact'],
-  ['FAQs', '/faq'],
-];
-
-const accountLinks = [
-  ['My account', '/account'],
-  ['Orders', '/account/orders'],
-  ['Addresses', '/account/addresses'],
-  ['My reviews', '/account/reviews'],
-  ['Returns & exchanges', '/account/returns'],
-  ['Notifications', '/account/notifications'],
 ];
 
 const policyLinks = [
-  ['Cash on delivery', '/policies/cod'],
-  ['Returns & exchanges', '/policies/returns'],
-  ['Refunds & cancellations', '/policies/refunds'],
-  ['Damaged products', '/policies/damaged'],
-  ['FAQs', '/faq'],
+  ['Terms and conditions', '/policies/terms'],
+  ['Privacy policy', '/policies/privacy'],
+  ['Returns and refunds', '/policies/returns'],
+  ['Shipping and delivery', '/policies/shipping'],
 ];
 
 function FooterLinks({ title, links }) {
@@ -119,7 +108,7 @@ export default function SiteFooter() {
           </section>
 
           <FooterLinks title="Explore" links={exploreLinks} />
-          <FooterLinks title="Your account" links={accountLinks} />
+          <FooterLinks title="Policies" links={policyLinks} />
 
           <section>
             <h2 className="mb-5 flex items-center gap-2 text-[0.68rem] font-bold uppercase tracking-[0.22em] text-[#e8c697]">
@@ -172,18 +161,6 @@ export default function SiteFooter() {
             </div>
           </section>
         </div>
-
-        <nav className="flex flex-wrap gap-x-5 gap-y-3 border-b border-white/10 py-5" aria-label="Store policies">
-          {policyLinks.map(([label, to]) => (
-            <Link
-              key={`${label}-${to}`}
-              className="text-xs text-white/50 outline-none transition duration-200 hover:text-[#f5c6ad] focus-visible:rounded-sm focus-visible:ring-2 focus-visible:ring-[#f5c6ad]/70 motion-reduce:transition-none"
-              to={to}
-            >
-              {label}
-            </Link>
-          ))}
-        </nav>
 
         <div className="flex flex-col gap-4 pt-5 text-xs text-white/45 sm:flex-row sm:items-center sm:justify-between sm:gap-5 sm:pt-6">
           <span>© {currentYear} Nishree Attire. All rights reserved.</span>

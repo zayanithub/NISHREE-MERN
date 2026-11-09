@@ -182,7 +182,7 @@ export function NotificationsPage() {
 
 const returnReasons = ['damaged_product', 'wrong_product', 'different_from_description', 'quality_issue', 'size_or_fit', 'other'];
 const exchangeReasons = ['wrong_product', 'damaged_product', 'different_from_description', 'size_or_fit', 'color_change', 'other'];
-const RETURN_EXCHANGE_WINDOW_DAYS = 5;
+const RETURN_EXCHANGE_WINDOW_DAYS = 7;
 const titleCase = (value = '') => value.replaceAll('_', ' ').replace(/\b\w/g, (letter) => letter.toUpperCase());
 const statusClass = (value = '') => `status-${String(value).toLowerCase().replaceAll('_', '-')}`;
 const returnTimelineStages = [
@@ -447,7 +447,7 @@ export function ReturnExchangePage() {
 
     {loading ? <LoadingState label="Checking your orders and requests…" /> : error ? <ErrorState message={error} onRetry={() => { setLoading(true); setError(''); void load(); }} /> : <>
       <section className="returns-orders-section" aria-labelledby="eligible-orders-title">
-        <div className="returns-section-heading"><div><span className="eyebrow">Your recent deliveries</span><h2 id="eligible-orders-title">Eligible orders</h2><p>Requests are available for five days after delivery. The store confirms eligibility when you submit.</p></div><span className="returns-count">{orderItems.filter((entry) => entry.isEligible).length} eligible item{orderItems.filter((entry) => entry.isEligible).length === 1 ? '' : 's'}</span></div>
+        <div className="returns-section-heading"><div><span className="eyebrow">Your recent deliveries</span><h2 id="eligible-orders-title">Eligible orders</h2><p>Requests are available for seven days after delivery. The store confirms eligibility when you submit.</p></div><span className="returns-count">{orderItems.filter((entry) => entry.isEligible).length} eligible item{orderItems.filter((entry) => entry.isEligible).length === 1 ? '' : 's'}</span></div>
         {orderItems.length ? <div className="returns-order-grid">{orderItems.map(({ key, order, item, deadline, isEligible }) => <article className="returns-order-card" key={key}>
           <div className="returns-order-product">
             {item.image ? <img src={item.image} alt="" loading="lazy" /> : <span className="returns-order-image-placeholder"><PackageCheck size={24} aria-hidden="true" /></span>}
@@ -501,12 +501,12 @@ export function ReturnExchangePage() {
       <section className="returns-information-section" aria-labelledby="returns-information-title">
         <div className="returns-section-heading"><div><span className="eyebrow">Good to know</span><h2 id="returns-information-title">Returns, exchanges &amp; refunds</h2></div></div>
         <div className="returns-information-grid">
-          <article><h3>Return policy</h3><p>Start a return request within five days of delivery. The store reviews each request and confirms eligibility before arranging next steps.</p><Link to="/policies/returns">View full policy <ArrowRight size={13} /></Link></article>
+          <article><h3>Return policy</h3><p>Start a return request within seven days of delivery. The store reviews each request and confirms eligibility before arranging next steps.</p><Link to="/policies/returns">View full policy <ArrowRight size={13} /></Link></article>
           <article><h3>Exchange policy</h3><p>Exchange requests are reviewed against your delivered order and the availability of the replacement product or option.</p><Link to="/policies/returns">View exchange details <ArrowRight size={13} /></Link></article>
           <article><h3>Refund information</h3><p>Refund processing begins after an approved return is received and reviewed. Check your order details for payment updates.</p><Link to="/policies/refunds">View refund information <ArrowRight size={13} /></Link></article>
         </div>
         <div className="returns-faq">
-          <details><summary>How long do I have to make a request?</summary><p>Submit your request within five days of delivery. Final eligibility is checked by the store when you submit.</p></details>
+          <details><summary>How long do I have to make a request?</summary><p>Submit your request within seven days of delivery. Final eligibility is checked by the store when you submit.</p></details>
           <details><summary>When will my refund or replacement arrive?</summary><p>Timing depends on review, pickup and inspection. We show the dates and updates recorded by the store in your request timeline.</p></details>
           <details><summary>What if my item is damaged or the return window has passed?</summary><p>Add clear product photos to a return request, or <Link to="/contact">contact support</Link> if your item is not currently eligible.</p></details>
         </div>

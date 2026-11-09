@@ -80,22 +80,22 @@ export const answerStoreQuestionFallback = (question, products = [], settings = 
     return { reply: `Cash on Delivery is available only when the final order total is ${formatRupees(COD_ORDER_LIMIT)} or less. It is unavailable above that limit. Checkout will validate the final amount.`, products: [] };
   }
   if (/\b(return|exchange|replace|replacement)\b/.test(message) && /\b(damaged|defect|transit|arrived broken|broken)\b/.test(message)) {
-    return support(`The policy permits return or exchange requests within ${RETURN_EXCHANGE_WINDOW_DAYS} days for review and approval, and asks customers with damaged or defective items to send photos on WhatsApp. A separate supplied condition says transit damage will not be processed, which conflicts with the general damaged-item terms and needs the business owner’s clarification. Please contact the store before relying on either condition.`);
+    return support(`Eligible returns or exchanges may be requested within ${RETURN_EXCHANGE_WINDOW_DAYS} days of receipt. For a damaged, defective, or incorrect product, contact the store within 48 hours of delivery with the order details and supporting photographs or videos. The request will be reviewed, and the available resolution depends on the circumstances and stock.`);
   }
   if (/\b(return|exchange|replace|replacement)\b/.test(message)) {
-    return support(`Return or exchange requests must be made within ${RETURN_EXCHANGE_WINDOW_DAYS} days of purchase and are processed only after review and approval. For a damaged or defective item, send photos through WhatsApp. The supplied transit-damage condition is still awaiting clarification by the business owner.`);
+    return support(`You may request a return within ${RETURN_EXCHANGE_WINDOW_DAYS} days of receiving the product. Items must be unused, unworn, unwashed, undamaged, and returned with their original tags and packaging. Eligible returns and exchanges are reviewed before approval.`);
   }
   if (/\b(refund|cancel|cancellation|cancelled|canceled)\b/.test(message)) {
-    return support("An eligible online order cancelled before shipping receives a full refund. If shipping has already been initiated, applicable transportation charges are deducted from the refund. Return and cancellation requests are subject to store review.");
+    return support("Refunds are considered for eligible returned products after inspection and approval, and are initiated to the original payment method wherever possible. You may request cancellation before dispatch; once shipped, please follow the return procedure. Shipping charges may be non-refundable unless the return is due to a store error.");
   }
   if (/\b(damaged|defective|defect|transit damage|arrived broken|broken)\b/.test(message)) {
-    return support("For a damaged or defective item, the supplied policy asks you to share photos through WhatsApp for review. The policy also states that transit damage will not be processed, which conflicts with its general damaged-item return and exchange terms. The business owner needs to clarify this condition before a definite answer can be given.");
+    return support("If you receive a damaged, defective, or incorrect product, contact the store within 48 hours of delivery with the order details and supporting photographs or videos. The team will review the request and advise on an available replacement, exchange, or refund.");
   }
   if (/\b(payment|pay online|online payment|card|upi|razorpay)\b/.test(message)) {
     return { reply: `Checkout displays the payment methods currently enabled for the store. Cash on Delivery is available only for a final total of ${formatRupees(COD_ORDER_LIMIT)} or less; above that, choose an online method shown at checkout.`, products: [] };
   }
   if (/\b(delivery time|when.*arriv|how long.*deliver|delivery charge|shipping charge|shipping cost|deliver to|shipping|delivery|dispatch|eppo.*varum|eppo.*deliver|delivery.*eppo|evlo.*naal)\b/.test(message)) {
-    return support("A confirmed delivery date or shipping charge is not available in the public catalogue. The checkout will show the applicable order total, and the store can confirm delivery coverage or timing for your address.");
+    return support("Orders are generally processed within 1–3 business days, and estimated delivery is 5–10 business days after dispatch. Delivery is subject to courier serviceability, and any shipping charge will be shown at checkout.");
   }
   if (/\b(login|log in|register|sign up|create account|profile|account|password)\b/.test(message)) {
     return { reply: "Use the account icon to sign in or create an account. After signing in, you can update your profile and addresses, review order history, and manage returns from My account. If sign-in fails, use the password reset option on the login page.", products: [] };
@@ -170,7 +170,7 @@ const aiAnswer = async (question, products, settings) => {
         temperature: 0.2,
         max_tokens: 350,
         messages: [
-          { role: "system", content: `You are the Nishree Attire shopping assistant. Answer briefly and only from this current catalogue and these business rules. Never invent stock, delivery estimates, payment status, policy exceptions, credentials, or customer data. Stock is available only when availableQuantity is above zero. COD is allowed only up to INR ${COD_ORDER_LIMIT}. Returns and exchanges may be requested within ${RETURN_EXCHANGE_WINDOW_DAYS} days from purchase and require review and approval. Applicable transportation charges are deducted when shipping has been initiated. The transit-damage condition conflicts with general damaged-item provisions and is unresolved; direct the user to WhatsApp and do not decide the conflict. Public chat cannot access personal order status; direct users to sign in and view orders. For unverified questions, say you do not know and direct the customer to WhatsApp. Store contact: ${settings.supportPhone}, ${settings.supportEmail}, ${settings.businessAddress}. WhatsApp URL: ${settings.whatsappUrl}.` },
+          { role: "system", content: `You are the Nishree Attire shopping assistant. Answer briefly and only from this current catalogue and these business rules. Never invent stock, delivery estimates, payment status, policy exceptions, credentials, or customer data. Stock is available only when availableQuantity is above zero. COD is allowed only up to INR ${COD_ORDER_LIMIT}. Return requests may be made within ${RETURN_EXCHANGE_WINDOW_DAYS} days of receipt and are subject to eligibility review. Damaged, defective, or incorrect products must be reported within 48 hours of delivery with supporting photos or videos. Orders are generally processed in 1–3 business days and estimated delivery is 5–10 business days after dispatch; shipping charges, if any, appear at checkout. Public chat cannot access personal order status; direct the user to sign in and view orders. For unverified questions, say you do not know and direct the customer to WhatsApp. Store contact: ${settings.supportPhone}, ${settings.supportEmail}, ${settings.businessAddress}. WhatsApp URL: ${settings.whatsappUrl}.` },
           { role: "user", content: `Current catalogue JSON: ${JSON.stringify(catalogue)}\nCustomer question: ${question}` },
         ],
       }),

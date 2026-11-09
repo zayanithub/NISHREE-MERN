@@ -14,7 +14,7 @@ npm.cmd run dev
 
 This command checks the API health endpoint, starts the backend from `../Backend` if needed, waits until its database is connected, and then starts Vite. Stop it with Ctrl+C to stop any processes it started. If the API is already healthy, it is reused and is not stopped with Vite. The proxy defaults to `http://127.0.0.1:5000`; set `VITE_BACKEND_URL` in the frontend environment to use a different API origin. The backend's `FRONTEND_URL` should be `http://localhost:5173` when requests bypass the Vite proxy.
 
-`VITE_API_BASE_URL` is browser-visible and must contain an API origin/path only; never put credentials or private keys in a `VITE_` variable. Production builds use `/api/v1` and the Vercel rewrite in `vercel.json` proxies `/api/*` to the Render API, keeping refresh and guest-cart cookies first-party on `nishree.in`. Keep the Vercel project root set to `Frontend` so this rewrite is applied. Set backend `FRONTEND_URL=https://nishree.in`; direct cross-origin API clients also require CORS. Local development uses the Vite `/api` proxy and backend `FRONTEND_URL=http://localhost:5173`. SMTP is checked after the API starts so a mail-provider outage does not make the API unavailable; email delivery will still report its own failures.
+`VITE_API_BASE_URL` is browser-visible and must contain an API origin/path only; never put credentials or private keys in a `VITE_` variable. Production builds use `/api/v1` and the Vercel rewrite in `vercel.json` proxies `/api/*` to the Render API, keeping refresh and guest-cart cookies first-party on `nishree.in`. Keep the Vercel project root set to `Frontend` so this rewrite is applied. Set backend `FRONTEND_URL=https://nishree.in`; direct cross-origin API clients also require CORS. Local development uses the Vite `/api` proxy and backend `FRONTEND_URL=http://localhost:5173`. Resend credentials and email sending are backend-only; an email provider outage does not prevent the API from starting.
 
 ## Checks
 
@@ -30,3 +30,9 @@ The frontend package does not define a unit-test script. See [API_INTEGRATION.md
 Run `npm.cmd run seed:products -- --dry-run` and then `npm.cmd run seed:products` from `../Backend` to add the idempotent 50-product sample catalogue. The sample inventory starts at zero and must be confirmed and stocked in Admin before products can be ordered. Read [the backend setup notes](../Backend/README.md) for image credits, seed behavior and admin setup.
 
 The homepage opens with a short, reduced-motion-aware Nishree Attire wordmark reveal. The earlier Saree Reveal gallery and its feature-only asset helper have been removed.
+
+## Saree collections
+
+The secondary category navigation and collection landing pages are driven by [`src/data/collectionCatalog.js`](./src/data/collectionCatalog.js). Add or edit a collection there to set its route slug, parent, description, SEO copy, imagery and product query; every entry is served through the reusable `/collections/:slug` page. Product queries use existing category slugs, catalogue tags, material fields or product text. Only map a subcategory to a source when the catalogue supports that classification; otherwise its collection stays empty until matching products are added. Silk-cotton subcategories are maintained under Silk Cotton rather than duplicated under Cotton.
+
+The collection template reuses the storefront product cards and product-list API. Product filters and pagination remain URL-backed; the API supports featured/newest/name/price sorting and in-stock/out-of-stock filtering.
