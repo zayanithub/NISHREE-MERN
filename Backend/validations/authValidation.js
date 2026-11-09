@@ -17,6 +17,10 @@ export const otpChallengeSchema = z.object({
   otp: z.string().regex(/^\d{6}$/),
 });
 
+export const otpResendSchema = z.object({
+  challengeId: z.string().regex(/^[a-f\d]{24}$/i),
+});
+
 export const forgotPasswordSchema = z.object({
   email: z.string().trim().email().max(254).transform((v) => v.toLowerCase()),
 });

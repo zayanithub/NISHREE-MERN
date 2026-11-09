@@ -20,8 +20,8 @@ const otpVerificationSchema = new mongoose.Schema(
       type: String,
       enum: [
         "email_verification",
+        "google_login",
         "phone_verification",
-        "login",
         "admin_login",
         "password_reset",
       ],

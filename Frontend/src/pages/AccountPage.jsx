@@ -6,11 +6,13 @@ import {
   Camera,
   CheckCircle2,
   Clock3,
+  ArrowUpRight,
   Heart,
   ImagePlus,
   MapPinned,
   MessageSquareText,
   Package,
+  Sparkles,
   ShoppingBag,
   Star,
   Trash2,
@@ -26,6 +28,10 @@ import { useAuth } from '../auth/useAuth';
 import { ErrorState } from '../components/States';
 import { useWishlist } from '../wishlist/useWishlist';
 import { formatDate, formatPrice } from '../utils/format';
+import accountHeroImage from '../assets/Regal Blush Saree in a Floral Arch.png';
+import accountCampaignImage from '../assets/Opulent Indian Bridal Portrait.png';
+import companyLogo from '../assets/Nishree Attire Navbar Logo.png';
+import './AccountPage.css';
 
 const readable = (value = '') => value.replaceAll('_', ' ');
 
@@ -148,15 +154,19 @@ export default function AccountPage() {
   return (
     <main className="page-wrap account-dashboard">
       <section className="account-welcome-card" aria-labelledby="account-welcome-title">
+        <img className="account-welcome-art" src={accountHeroImage} alt="" aria-hidden="true" fetchPriority="high" />
+        <div className="account-welcome-art-shade" aria-hidden="true" />
+        <span className="account-welcome-ornament" aria-hidden="true"><Sparkles size={17} /></span>
         <div className="account-welcome-copy">
-          <span className="eyebrow">YOUR NISHREE ACCOUNT</span>
+          <span className="eyebrow"><span className="account-eyebrow-line" /> YOUR NISHREE ACCOUNT</span>
           <h1 id="account-welcome-title">Welcome back, {user?.name?.trim()?.split(/\s+/)[0] || 'there'}.</h1>
-          <p>Your personal space for every order, saved piece and delivery update.</p>
+          <p>Your personal atelier for every order, saved piece and delivery update.</p>
           <div className="account-profile-details">
             {user?.name && <span><UserRound size={14} aria-hidden="true" />{user.name}</span>}
             {user?.email && <span>{user.email}</span>}
             {user?.phone && <span>{user.phone}</span>}
           </div>
+          <div className="account-welcome-signature"><span /> Tradition. Elegance. You.</div>
         </div>
         <div className="account-photo-editor">
           <ProfileAvatar image={image} name={user?.name} />
@@ -254,6 +264,24 @@ export default function AccountPage() {
           </div>
         )}
       </section>
+
+      <section className="account-promo-banner" aria-label="Discover the latest collection">
+        <img src={accountCampaignImage} alt="" aria-hidden="true" loading="lazy" decoding="async" />
+        <div className="account-promo-overlay" aria-hidden="true" />
+        <div className="account-promo-copy">
+          <span><Sparkles size={13} aria-hidden="true" /> THE NISHREE EDIT</span>
+          <h2>Because you deserve<br />the finest.</h2>
+          <p>Discover timeless drapes, chosen for your most beautiful moments.</p>
+          <Link to="/shop">Shop the collection <ArrowUpRight size={16} aria-hidden="true" /></Link>
+        </div>
+      </section>
+
+      <footer className="account-dashboard-footer">
+        <img src={companyLogo} alt="" width="34" height="34" />
+        <span>NISHREE ATTIRE</span>
+        <i />
+        <small>Tradition. Elegance. You.</small>
+      </footer>
     </main>
   );
 }

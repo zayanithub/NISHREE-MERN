@@ -6,12 +6,17 @@ import { useForm } from 'react-hook-form';
 import { toast } from 'sonner';
 import {
   ArrowRight,
+  ArrowUpRight,
+  BadgeCheck,
   ChevronDown,
+  FileText,
   HeartHandshake,
+  LockKeyhole,
   Mail,
   MapPin,
   Phone,
   Printer,
+  RotateCcw,
   ShieldCheck,
   Sparkles,
   Truck,
@@ -23,6 +28,7 @@ import aboutShowroom from '../assets/saree showroom images.png';
 import aboutPortrait from '../assets/saree girl image.jpg';
 import { contactApi } from '../api/contactApi';
 import { normalizeApiError } from '../api/client';
+import './PolicyPages.css';
 
 const contactSchema = z.object({
   fullName: z.string().trim().min(2, 'Enter your full name.').max(100),
@@ -32,14 +38,118 @@ const contactSchema = z.object({
 });
 
 const policyTitles = {
-  cod: 'Cash on delivery',
-  returns: 'Returns & exchanges',
-  refunds: 'Refunds & cancellations',
-  damaged: 'Damaged products',
-  shipping: 'Shipping information',
-  privacy: 'Privacy policy',
   terms: 'Terms and conditions',
+  privacy: 'Privacy policy',
+  returns: 'Return and refund policy',
+  shipping: 'Shipping and delivery policy',
 };
+
+const policyPresentation = {
+  terms: {
+    eyebrow: 'A clear way to shop',
+    description: 'The details that help make every Nishree Attire purchase feel considered and straightforward.',
+    icon: FileText,
+    navDescription: 'Shopping terms',
+  },
+  privacy: {
+    eyebrow: 'Your privacy, respected',
+    description: 'Learn how information is handled when you browse, shop, or get in touch with us.',
+    icon: LockKeyhole,
+    navDescription: 'Your information',
+  },
+  returns: {
+    eyebrow: 'Thoughtful aftercare',
+    description: 'Everything you need to know about return requests, refunds, and post-purchase support.',
+    icon: RotateCcw,
+    navDescription: 'Returns and refunds',
+  },
+  shipping: {
+    eyebrow: 'From our atelier to your door',
+    description: 'A helpful guide to order processing, dispatch, and delivery from Nishree Attire.',
+    icon: Truck,
+    navDescription: 'Shipping and delivery',
+  },
+};
+
+const policyEmphasisPattern =
+  /(\b(?:important|please note|note|email|phone|address|contact|processing time|estimated delivery)\s*:|\b(?:within\s+\d+\s+days?|5–10 business days|1–3 business days|7 days|48 hours)\b)/gi;
+const policyEmphasisMatch = new RegExp(policyEmphasisPattern.source, 'i');
+
+function renderPolicyLine(line) {
+  return line.split(policyEmphasisPattern).map((part, index) => {
+    if (!part) return null;
+    return policyEmphasisMatch.test(part)
+      ? <strong key={`${part}-${index}`}>{part}</strong>
+      : <span key={`${part}-${index}`}>{part}</span>;
+  });
+}
+
+function PolicyContent({ content }) {
+  const blocks = [];
+  let paragraph = [];
+  let list = [];
+
+  const flushParagraph = () => {
+    if (!paragraph.length) return;
+    const text = paragraph.join(' ').trim();
+    const isLead = text.endsWith(':');
+    blocks.push(
+      isLead
+        ? <p className="store-policy-lead" key={`lead-${blocks.length}`}><strong><em>{renderPolicyLine(text)}</em></strong></p>
+        : <p key={`paragraph-${blocks.length}`}>{renderPolicyLine(text)}</p>,
+    );
+    paragraph = [];
+  };
+
+  const flushList = () => {
+    if (!list.length) return;
+    blocks.push(
+      <ul key={`list-${blocks.length}`}>
+        {list.map((item, index) => <li key={`${index}-${item}`}>{renderPolicyLine(item)}</li>)}
+      </ul>,
+    );
+    list = [];
+  };
+
+  content.split(/\r?\n/).forEach((rawLine) => {
+    const line = rawLine.trim();
+    if (!line) {
+      flushParagraph();
+      flushList();
+      return;
+    }
+
+    const heading = line.match(/^(\d+(?:\.\d+)*)(?:[.)])?\s+(.+)$/);
+    if (heading) {
+      flushParagraph();
+      flushList();
+      const depth = heading[1].split('.').length;
+      const Heading = depth > 1 ? 'h4' : 'h3';
+      blocks.push(
+        <Heading className={`store-policy-section-heading${depth > 1 ? ' is-subheading' : ''}`} key={`heading-${blocks.length}`}>
+          <span>{heading[1]}</span>
+          {heading[2]}
+        </Heading>,
+      );
+      return;
+    }
+
+    const bullet = line.match(/^[-•]\s+(.+)$/);
+    if (bullet) {
+      flushParagraph();
+      list.push(bullet[1]);
+      return;
+    }
+
+    flushList();
+    paragraph.push(line);
+  });
+
+  flushParagraph();
+  flushList();
+
+  return <div className="store-policy-copy">{blocks}</div>;
+}
 
 function AmbientPage({ eyebrow, children, className = '' }) {
   return (
@@ -197,7 +307,6 @@ export function ContactPage() {
                 <path d="M20.52 3.48A11.89 11.89 0 0 0 12.06 0C5.48 0 .13 5.34.13 11.92c0 2.1.55 4.16 1.59 5.97L0 24l6.27-1.64a11.9 11.9 0 0 0 5.78 1.47h.01c6.57 0 11.92-5.35 11.92-11.92a11.85 11.85 0 0 0-3.46-8.43ZM12.06 21.8h-.01a9.9 9.9 0 0 1-5.04-1.38l-.36-.21-3.72.97.99-3.63-.23-.37a9.88 9.88 0 1 1 8.37 4.62Zm5.42-7.4c-.3-.15-1.75-.86-2.02-.96-.27-.1-.47-.15-.67.15-.2.3-.76.96-.94 1.16-.17.2-.35.22-.65.07-.3-.15-1.25-.46-2.38-1.47-.88-.78-1.47-1.75-1.64-2.05-.17-.3-.02-.46.13-.61.13-.13.3-.35.45-.52.15-.17.2-.3.3-.5.1-.2.05-.37-.02-.52-.08-.15-.67-1.61-.92-2.2-.24-.58-.49-.5-.67-.51h-.57c-.2 0-.52.08-.79.37-.27.3-1.04 1.02-1.04 2.47s1.07 2.87 1.22 3.07c.15.2 2.1 3.2 5.09 4.49.71.3 1.27.49 1.7.63.72.23 1.37.2 1.88.12.57-.09 1.75-.72 2-1.42.25-.7.25-1.3.17-1.42-.07-.13-.27-.2-.57-.35Z" />
               </svg>
               <span>Enquire on WhatsApp</span>
-              <ArrowRight size={16} aria-hidden="true" />
             </a>
             <SocialLinks className="contact-brand-socials" settings={{ ...settings, whatsappUrl }} labelled />
           </div>
@@ -209,11 +318,11 @@ export function ContactPage() {
 
 const faqs = [
   { question: 'How can I ask about a saree?', answer: <>Open its product page for the listed fabric, colour and description. For a product enquiry or confirmation, message us on <Link to="/contact">WhatsApp</Link>.</> },
-  { question: 'When is Cash on Delivery available?', answer: <>COD is available for orders with a final total of ₹2,000 or less. Orders above ₹2,000 must use online payment. <Link to="/policies/cod">Read the COD policy.</Link></> },
-  { question: 'What is the return or exchange window?', answer: <>Requests may be made within 5 days of purchase. Each request is reviewed and needs approval before it is processed. <Link to="/policies/returns">Read the return and exchange policy.</Link></> },
-  { question: 'What should I do if my product appears damaged?', answer: <>Share clear photographs through WhatsApp within 5 days of purchase. The store will review the request. The supplied policies conflict about transit damage; see the <Link to="/policies/damaged">damaged product policy</Link> and the owner review note there.</> },
-  { question: 'How are refunds calculated?', answer: <>Eligible refunds for returned or cancelled orders deduct applicable transportation charges once shipping has been initiated. <Link to="/policies/refunds">Read the refund and cancellation policy.</Link></> },
-  { question: 'When will my order arrive?', answer: <>A delivery-time estimate is not currently published. Contact the store to confirm dispatch and delivery details before ordering.</> },
+  { question: 'Which payment methods are available?', answer: <>Available payment options are shown on the website during checkout. <Link to="/policies/terms">Read the terms and conditions.</Link></> },
+  { question: 'What is the return or exchange window?', answer: <>Eligible return requests may be made within 7 days of receiving the product. <Link to="/policies/returns">Read the return and refund policy.</Link></> },
+  { question: 'What should I do if my product appears damaged?', answer: <>Contact us within 48 hours of delivery with your order details and supporting photographs or videos. See the <Link to="/policies/returns">return and refund policy</Link> for details.</> },
+  { question: 'How do refunds work?', answer: <>Eligible refunds are considered after the returned product is inspected and approved. <Link to="/policies/returns">Read the return and refund policy.</Link></> },
+  { question: 'When will my order arrive?', answer: <>Orders are generally processed within 1–3 business days and estimated delivery is 5–10 business days after dispatch. <Link to="/policies/shipping">Read the shipping and delivery policy.</Link></> },
   { question: 'How can I follow an order?', answer: <>Sign in and open <Link to="/account/orders">Your orders</Link> to see the current status recorded by the store.</> },
 ];
 
@@ -237,49 +346,99 @@ export function FAQPage() {
 }
 
 export function PoliciesPage() {
-  const { section = 'cod' } = useParams();
+  const { section = 'terms' } = useParams();
   const settings = useStoreSettings();
+  const sectionAliases = { cod: 'terms', refunds: 'returns', damaged: 'returns' };
+  const requestedKey = sectionAliases[section] || section;
   const publishedPolicies = Object.entries(policyTitles).filter(([key]) => (
     settings.policies?.[key]?.isPublished && settings.policies[key].content.trim()
   ));
-  const selectedKey = publishedPolicies.some(([key]) => key === section)
-    ? section
-    : publishedPolicies[0]?.[0] || 'cod';
+  const selectedKey = publishedPolicies.some(([key]) => key === requestedKey)
+    ? requestedKey
+    : publishedPolicies[0]?.[0] || 'terms';
   const selected = {
     title: policyTitles[selectedKey],
     content: settings.policies?.[selectedKey]?.content || '',
   };
+  const presentation = policyPresentation[selectedKey] || policyPresentation.terms;
+  const PolicyIcon = presentation.icon;
+  const selectedIndex = Object.keys(policyTitles).indexOf(selectedKey);
 
   return (
     <AmbientPage eyebrow="The details, made clear" className="store-policies-page">
-      <header className="store-policy-heading"><div><span className="eyebrow">Good to know before you order</span><h1>Store policies<span>.</span></h1><p>Clear answers about shopping with Nishree Attire. Choose a topic to read the details.</p></div><div className="store-policy-seal"><ShieldCheck size={19} /><span>Customer<br />information</span></div></header>
+      <header className="store-policy-heading">
+        <div className="store-policy-heading-copy">
+          <span className="store-policy-overline">
+            <span className="store-policy-overline-mark"><Sparkles size={13} aria-hidden="true" /></span>
+            CUSTOMER CARE <i /> POLICY {String(selectedIndex + 1).padStart(2, '0')} / {String(Object.keys(policyTitles).length).padStart(2, '0')}
+          </span>
+          <p className="store-policy-kicker">{presentation.eyebrow}</p>
+          <h1>{selected.title}<span>.</span></h1>
+          <p className="store-policy-description">{presentation.description}</p>
+        </div>
+        <div className="store-policy-seal">
+          <span className="store-policy-seal-icon"><PolicyIcon size={20} aria-hidden="true" /></span>
+          <span>Made clear,<br />with care</span>
+        </div>
+      </header>
 
       <div className="store-policies-layout">
         <nav className="store-policy-nav" aria-label="Policy pages">
-          <span className="store-policy-nav-title">Browse policies</span>
-          {publishedPolicies.map(([key, title], index) => {
+          <div className="store-policy-nav-heading">
+            <span className="store-policy-nav-title">Your guide</span>
+            <span className="store-policy-nav-count">{publishedPolicies.length} topics</span>
+          </div>
+          {publishedPolicies.map(([key, title]) => {
             const active = key === selectedKey;
-            return <Link key={key} aria-current={active ? 'page' : undefined} to={`/policies/${key}`} className={`store-policy-nav-link${active ? ' is-active' : ''}`}><span>{String(index + 1).padStart(2, '0')}</span><strong>{title}</strong><ArrowRight size={15} /></Link>;
+            const ItemIcon = policyPresentation[key]?.icon || FileText;
+            return (
+              <Link
+                key={key}
+                aria-current={active ? 'page' : undefined}
+                to={`/policies/${key}`}
+                className={`store-policy-nav-link${active ? ' is-active' : ''}`}
+              >
+                <span className="store-policy-nav-icon"><ItemIcon size={16} aria-hidden="true" /></span>
+                <span className="store-policy-nav-copy">
+                  <strong>{title}</strong>
+                  <small>{policyPresentation[key]?.navDescription}</small>
+                </span>
+                <ArrowUpRight size={15} aria-hidden="true" />
+              </Link>
+            );
           })}
           {!publishedPolicies.length && <p className="store-policy-empty">Policies are being prepared. Please contact us if you need help.</p>}
+          <div className="store-policy-nav-note">
+            <BadgeCheck size={16} aria-hidden="true" />
+            <span>Clear information, whenever you need it.</span>
+          </div>
         </nav>
-        <article className="store-policy-sheet">
-          <header><span className="store-policy-category">NISHREE ATTIRE · POLICY</span><button type="button" className="store-policy-print" onClick={() => window.print()}><Printer size={15} /> Print</button></header>
+        <article className="store-policy-sheet" aria-labelledby="store-policy-document-title">
+          <header>
+            <span className="store-policy-category"><PolicyIcon size={15} aria-hidden="true" /> NISHREE ATTIRE <i /> POLICY DOCUMENT</span>
+            <button type="button" className="store-policy-print" onClick={() => window.print()}><Printer size={15} /> Print policy</button>
+          </header>
           <div className="store-policy-sheet-body">
-            <h2>{selected.title}</h2>
-            <p className="store-policy-copy">{selected.content || 'This policy has not been published yet. Please contact the store for assistance.'}</p>
-            {selectedKey === 'damaged' && (
-              <aside className="store-policy-review-note">
-                <strong>Business owner review required</strong>
-                <p>The supplied conditions say damaged or defective products may be reported with photos for review, and also say transit-damaged products will not be returned or exchanged. Those statements may conflict. Please confirm this exception before publishing the policy as final; the site preserves both conditions without resolving them.</p>
-              </aside>
-            )}
+            <div className="store-policy-document-heading">
+              <span className="store-policy-document-index">{String(selectedIndex + 1).padStart(2, '0')}</span>
+              <div>
+                <span className="store-policy-document-label">{presentation.eyebrow}</span>
+                <h2 id="store-policy-document-title">{selected.title}</h2>
+              </div>
+            </div>
+            <PolicyContent content={selected.content || 'This policy has not been published yet. Please contact the store for assistance.'} />
             {selectedKey === 'shipping' && <p className="store-policy-help">Questions? <Link to="/contact">Contact the store</Link>.</p>}
           </div>
-          <footer><span>Need help understanding this policy?</span><Link to="/contact">Contact Nishree Attire <ArrowRight size={14} /></Link></footer>
+          <footer>
+            <span className="store-policy-footer-prompt"><HeartHandshake size={16} aria-hidden="true" /> Need a little help?</span>
+            <Link to="/contact">Talk to our team <ArrowRight size={14} /></Link>
+          </footer>
         </article>
       </div>
-      <p className="store-policy-whatsapp">Need help with a request? <Link to="/contact">Contact Nishree Attire</Link>{settings.whatsappUrl && <> or <a href={settings.whatsappUrl} target="_blank" rel="noopener noreferrer">message us on WhatsApp</a></>}.</p>
+      <p className="store-policy-whatsapp">
+        Need help with a request? <Link to="/contact">Contact Nishree Attire</Link>
+        {settings.whatsappUrl && <> or <a href={settings.whatsappUrl} target="_blank" rel="noopener noreferrer">message us on WhatsApp</a></>}.
+      </p>
     </AmbientPage>
   );
 }

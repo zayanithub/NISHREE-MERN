@@ -6,6 +6,9 @@ import {
   updateProduct as updateProductService,
   updateProductStatus as updateProductStatusService,
   deleteProduct as deleteProductService,
+  getProductImageCompletionReport as getProductImageCompletionReportService,
+  getPublicProductFacets as getPublicProductFacetsService,
+  getPublicBestSellingProducts as getPublicBestSellingProductsService,
 } from "../service/productService.js";
 
 /*
@@ -25,10 +28,17 @@ export const getPublicProducts = async (req, res, next) => {
       limit,
       search,
       category,
+      categories,
+      collectionSearch,
       material,
+      occasion,
+      excludeMaterial,
+      collectionMaterial,
+      collectionExcludeMaterial,
       color,
       minPrice,
       maxPrice,
+      available,
       isFeatured,
       tags,
       sort,
@@ -39,10 +49,17 @@ export const getPublicProducts = async (req, res, next) => {
       limit,
       search,
       category,
+      categories,
+      collectionSearch,
       material,
+      occasion,
+      excludeMaterial,
+      collectionMaterial,
+      collectionExcludeMaterial,
       color,
       minPrice,
       maxPrice,
+      available,
       isFeatured,
       tags,
       sort,
@@ -52,6 +69,34 @@ export const getPublicProducts = async (req, res, next) => {
       success: true,
       message: "Products retrieved successfully.",
       ...result,
+    });
+  } catch (error) {
+    return next(error);
+  }
+};
+
+export const getPublicProductFacets = async (req, res, next) => {
+  try {
+    const facets = await getPublicProductFacetsService();
+    return res.status(200).json({
+      success: true,
+      message: "Product filters retrieved successfully.",
+      facets,
+    });
+  } catch (error) {
+    return next(error);
+  }
+};
+
+export const getPublicBestSellingProducts = async (req, res, next) => {
+  try {
+    const products = await getPublicBestSellingProductsService({
+      limit: req.query.limit ?? 8,
+    });
+    return res.status(200).json({
+      success: true,
+      message: "Best-selling products retrieved successfully.",
+      products,
     });
   } catch (error) {
     return next(error);
@@ -135,6 +180,22 @@ export const getAdminProducts = async (req, res, next) => {
       success: true,
       message: "Admin products retrieved successfully.",
       ...result,
+    });
+  } catch (error) {
+    return next(error);
+  }
+};
+
+export const getProductImageCompletionReport = async (req, res, next) => {
+  try {
+    const report = await getProductImageCompletionReportService({
+      page: req.query.page,
+      limit: req.query.limit,
+    });
+    return res.status(200).json({
+      success: true,
+      message: "Product image completion report retrieved successfully.",
+      ...report,
     });
   } catch (error) {
     return next(error);

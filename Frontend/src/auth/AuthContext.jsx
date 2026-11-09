@@ -52,20 +52,33 @@ export function AuthProvider({ children }) {
     };
   }, [acceptSession]);
 
-  const login = useCallback((credentials) => authApi.login(credentials), []);
-  const register = useCallback((details) => authApi.register(details), []);
-  const verifyLoginOtp = useCallback(async (challenge) => {
-    const session = await authApi.verifyLoginOtp(challenge);
+  const login = useCallback(async (credentials) => {
+    const session = await authApi.login(credentials);
     window.localStorage.setItem('nishree-customer-last-activity', String(Date.now()));
     acceptSession(session);
     return session;
   }, [acceptSession]);
+  const register = useCallback((details) => authApi.register(details), []);
   const verifyRegistrationEmail = useCallback(async (challenge) => {
     const session = await authApi.verifyRegistrationEmail(challenge);
     window.localStorage.setItem('nishree-customer-last-activity', String(Date.now()));
     acceptSession(session);
     return session;
   }, [acceptSession]);
+  const resendRegistrationOtp = useCallback(
+    (challenge) => authApi.resendRegistrationOtp(challenge),
+    [],
+  );
+  const verifyGoogleOtp = useCallback(async (challenge) => {
+    const session = await authApi.verifyGoogleOtp(challenge);
+    window.localStorage.setItem('nishree-customer-last-activity', String(Date.now()));
+    acceptSession(session);
+    return session;
+  }, [acceptSession]);
+  const resendGoogleOtp = useCallback(
+    (challenge) => authApi.resendGoogleOtp(challenge),
+    [],
+  );
   const logout = useCallback(async () => {
     const request = authApi.logout();
     window.localStorage.removeItem('nishree-customer-last-activity');
@@ -84,10 +97,12 @@ export function AuthProvider({ children }) {
     loading,
     login,
     register,
-    verifyLoginOtp,
     verifyRegistrationEmail,
+    resendRegistrationOtp,
+    verifyGoogleOtp,
+    resendGoogleOtp,
     logout,
     updateUser,
-  }), [user, loading, login, register, verifyLoginOtp, verifyRegistrationEmail, logout, updateUser]);
+  }), [user, loading, login, register, verifyRegistrationEmail, resendRegistrationOtp, verifyGoogleOtp, resendGoogleOtp, logout, updateUser]);
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;
 }

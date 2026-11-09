@@ -10,8 +10,8 @@ export const defaultStoreSettings = {
   instagramUrl: 'https://www.instagram.com/nishree_fashions/',
   facebookUrl: 'https://www.facebook.com/share/19KgfTEgdN/',
   codLimit: 2000,
-  returnWindowDays: 5,
-  exchangeWindowDays: 5,
+  returnWindowDays: 7,
+  exchangeWindowDays: 7,
 };
 
 export const StoreSettingsContext = createContext(defaultStoreSettings);

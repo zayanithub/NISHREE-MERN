@@ -45,7 +45,7 @@ This storefront does not expose administrative operations. `POST /api/v1/admin/a
 
 ## Verified limits and missing public APIs
 
-- No newsletter endpoint is mounted. Contact messages use `POST /contact`, are validated and sent to the configured store support email through SMTP.
+- No newsletter endpoint is mounted. Contact messages use `POST /contact`, are validated and sent through the backend Resend API to the configured store support email.
 - There is no public shipping-rate/estimate or store-settings endpoint. Checkout does not invent those values; saved order amounts are shown from the server.
 - Product list filters support material and price but not colour. Sort does not include price ordering; UI uses only supported values.
 - Product detail exposes active variants but no live stock count; bag availability comes from the server cart.

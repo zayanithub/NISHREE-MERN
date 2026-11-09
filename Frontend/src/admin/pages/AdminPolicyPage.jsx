@@ -4,13 +4,10 @@ import { toast } from 'sonner';
 import { adminApi } from '../adminApi';
 
 const sections = [
-  { key: 'shipping', title: 'Shipping policy' },
-  { key: 'returns', title: 'Return policy' },
-  { key: 'refunds', title: 'Refund policy' },
-  { key: 'damaged', title: 'Damaged products' },
-  { key: 'cod', title: 'Cash on delivery' },
-  { key: 'privacy', title: 'Privacy policy' },
   { key: 'terms', title: 'Terms and conditions' },
+  { key: 'privacy', title: 'Privacy policy' },
+  { key: 'returns', title: 'Return and refund policy' },
+  { key: 'shipping', title: 'Shipping and delivery policy' },
 ];
 
 const emptyPolicies = () => Object.fromEntries(

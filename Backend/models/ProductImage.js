@@ -20,6 +20,13 @@ const productImageSchema = new mongoose.Schema(
       trim: true,
     },
 
+    contentHash: {
+      type: String,
+      trim: true,
+      default: "",
+      maxlength: 64,
+    },
+
     altText: {
       type: String,
       trim: true,

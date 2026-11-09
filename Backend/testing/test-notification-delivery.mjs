@@ -1,6 +1,5 @@
 import test from "node:test";
 import assert from "node:assert/strict";
-import nodemailer from "nodemailer";
 
 import NotificationLog from "../models/NotificationLog.js";
 import NotificationPreference from "../models/NotificationPreference.js";
@@ -229,11 +228,10 @@ test("retries transient provider failures with bounded backoff", async (t) => {
   );
 });
 
-test("does not automatically retry SMTP timeouts after message transmission starts", () => {
+test("does not automatically retry when the email provider outcome is unknown", () => {
   const failure = notificationDeliveryInternals.getFailureState(
     {
-      code: "ETIMEDOUT",
-      command: "DATA",
+      code: "RESEND_OUTCOME_UNKNOWN",
       outcomeUnknown: true,
     },
     1
@@ -241,7 +239,7 @@ test("does not automatically retry SMTP timeouts after message transmission star
   assert.deepEqual(failure, {
     outcomeUnknown: true,
     status: "uncertain",
-    lastErrorCode: "SMTP_OUTCOME_UNKNOWN",
+    lastErrorCode: "RESEND_OUTCOME_UNKNOWN",
     nextAttemptAt: null,
   });
 });
@@ -485,26 +483,18 @@ test("sends WhatsApp approved-template requests with provider IDs", async (t) =>
   );
 });
 
-test("sends escaped transactional HTML through the configured SMTP transport", async (t) => {
+test("sends escaped transactional HTML through the Resend API", async (t) => {
   const keys = [
-    "SMTP_HOST",
-    "SMTP_PORT",
-    "SMTP_SECURE",
-    "SMTP_USER",
-    "SMTP_PASS",
-    "MAIL_FROM",
+    "RESEND_API_KEY",
+    "EMAIL_FROM",
     "FRONTEND_URL",
   ];
   const prior = Object.fromEntries(
     keys.map((key) => [key, process.env[key]])
   );
   Object.assign(process.env, {
-    SMTP_HOST: "smtp.example.test",
-    SMTP_PORT: "587",
-    SMTP_SECURE: "false",
-    SMTP_USER: "sender@example.test",
-    SMTP_PASS: "smtp-test-password",
-    MAIL_FROM: "Nishree <sender@example.test>",
+    RESEND_API_KEY: "re_notification_test",
+    EMAIL_FROM: "onboarding@resend.dev",
     FRONTEND_URL: "https://store.example.test",
   });
   t.after(() => {
@@ -514,12 +504,16 @@ test("sends escaped transactional HTML through the configured SMTP transport", a
     }
   });
   let sentMessage;
-  t.mock.method(nodemailer, "createTransport", () => ({
-    sendMail: async (message) => {
-      sentMessage = message;
-      return { messageId: "smtp-message-1" };
-    },
-  }));
+  let requestOptions;
+  t.mock.method(globalThis, "fetch", async (_url, options) => {
+    requestOptions = options;
+    sentMessage = JSON.parse(options.body);
+    return new Response(JSON.stringify({ id: "resend-message-1" }), {
+      status: 200,
+      headers: { "content-type": "application/json" },
+    });
+  });
+  t.mock.method(console, "info", () => {});
   t.mock.method(NotificationTemplate, "findOne", () =>
     leanQuery(null)
   );
@@ -539,10 +533,14 @@ test("sends escaped transactional HTML through the configured SMTP transport", a
   });
 
   assert.deepEqual(result, {
-    provider: "smtp",
-    providerMessageId: "smtp-message-1",
+    provider: "resend",
+    providerMessageId: "resend-message-1",
   });
   assert.equal(sentMessage.to, "customer@example.test");
+  assert.equal(
+    requestOptions.headers.get("idempotency-key"),
+    `notification-${DELIVERY_ID}`
+  );
   assert.match(sentMessage.html, /&lt;script&gt;/);
   assert.doesNotMatch(sentMessage.html, /<script>/);
   assert.match(sentMessage.html, /https:\/\/store\.example\.test\/orders\/123/);

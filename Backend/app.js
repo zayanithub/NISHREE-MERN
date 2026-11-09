@@ -54,6 +54,9 @@ import notificationDeliveryWebhookRoutes from "./routes/notificationDeliveryWebh
 import contactRoutes from "./routes/contactRoutes.js";
 import homepageImageRoutes from "./routes/homepageImageRoutes.js";
 import adminHomepageImageRoutes from "./routes/admin/homepageImageRoutes.js";
+import newsletterRoutes from "./routes/newsletterRoutes.js";
+import blogPostRoutes from "./routes/blogPostRoutes.js";
+import adminBlogPostRoutes from "./routes/admin/blogPostRoutes.js";
 
 const app = express();
 
@@ -61,7 +64,7 @@ app.set("trust proxy", 1);
 
 app.use(helmet());
 
-const allowedOrigin = process.env.FRONTEND_URL || "http://localhost:5173";
+const allowedOrigin = process.env.FRONTEND_URL || "http://localhost:5713";
 
 app.use(
   cors({
@@ -183,6 +186,9 @@ app.use("/api/v1/admin/homepage-images", adminHomepageImageRoutes);
 app.use("/api/v1/homepage-images", homepageImageRoutes);
 app.use("/api/v1/settings", storeSettingsRoutes);
 app.use("/api/v1/contact", contactRoutes);
+app.use("/api/v1/newsletter", newsletterRoutes);
+app.use("/api/v1/blogs", blogPostRoutes);
+app.use("/api/v1/admin/blogs", adminBlogPostRoutes);
 app.use("/api/v1/chatbot", chatbotRoutes);
 
 app.use("/api/v1/admin/audit-logs", adminAuditLogRoutes);

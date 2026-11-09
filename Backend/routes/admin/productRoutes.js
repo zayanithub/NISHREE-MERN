@@ -2,6 +2,7 @@ import { Router } from "express";
 
 import {
   getAdminProducts,
+  getProductImageCompletionReport,
   getAdminProductById,
   createProduct,
   updateProduct,
@@ -41,6 +42,12 @@ router.get(
   "/",
   requirePermission("products", "read"),
   getAdminProducts
+);
+
+router.get(
+  "/image-completion",
+  requirePermission("products", "read"),
+  getProductImageCompletionReport
 );
 
 /*

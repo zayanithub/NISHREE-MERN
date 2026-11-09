@@ -3,7 +3,7 @@ import { Router } from "express";
 import {
   register,
   login,
-  verifyLoginOtp,
+  resendRegistrationOtp,
   verifyRegistrationEmail,
   forgotPassword,
   verifyForgotPasswordOtp,
@@ -11,6 +11,12 @@ import {
   refresh,
   logout,
   getMe,
+  googleStatus,
+  startGoogleAuth,
+  googleCallback,
+  googleChallengeDetails,
+  resendGoogleOtp,
+  verifyGoogleOtp,
 } from "../controllers/authController.js";
 
 import authMiddleware from "../middlewares/authMiddleware.js";
@@ -22,6 +28,7 @@ import {
   registerSchema,
   loginSchema,
   otpChallengeSchema,
+  otpResendSchema,
   forgotPasswordSchema,
   resetPasswordSchema,
 } from "../validations/authValidation.js";
@@ -41,8 +48,14 @@ const authChallengeLimiter = rateLimit({
 });
 
 router.post("/register", authChallengeLimiter, validate(registerSchema), register);
+router.get("/google/status", googleStatus);
+router.get("/google", authChallengeLimiter, startGoogleAuth);
+router.get("/google/callback", googleCallback);
+router.get("/google/challenge/:challengeId", googleChallengeDetails);
+router.post("/google/resend-otp", authChallengeLimiter, validate(otpResendSchema), resendGoogleOtp);
+router.post("/google/verify-otp", authChallengeLimiter, validate(otpChallengeSchema), verifyGoogleOtp);
+router.post("/register/resend-otp", authChallengeLimiter, validate(otpResendSchema), resendRegistrationOtp);
 router.post("/login", authChallengeLimiter, validate(loginSchema), login);
-router.post("/login/verify-otp", authChallengeLimiter, validate(otpChallengeSchema), verifyLoginOtp);
 router.post("/register/verify-email", authChallengeLimiter, validate(otpChallengeSchema), verifyRegistrationEmail);
 router.post("/forgot-password", authChallengeLimiter, validate(forgotPasswordSchema), forgotPassword);
 router.post("/forgot-password/verify-otp", authChallengeLimiter, validate(otpChallengeSchema), verifyForgotPasswordOtp);

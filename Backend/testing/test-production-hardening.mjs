@@ -69,11 +69,8 @@ test("runtime config validates ports and production security-critical settings",
       JWT_ACCESS_SECRET: "a".repeat(32),
       FRONTEND_URL: "https://store.example",
       PUBLIC_API_URL: "https://api.store.example",
-      SMTP_HOST: "smtp.example.test",
-      SMTP_PORT: "465",
-      SMTP_SECURE: "true",
-      SMTP_USER: "sender@example.test",
-      SMTP_PASS: "smtp-test-password",
+      RESEND_API_KEY: "re_test_key",
+      EMAIL_FROM: "onboarding@resend.dev",
     }),
     { port: 5000, sameSite: "lax" }
   );
@@ -86,7 +83,33 @@ test("runtime config validates ports and production security-critical settings",
         JWT_ACCESS_SECRET: "a".repeat(32),
         FRONTEND_URL: "https://store.example",
       }),
-    /SMTP_HOST, SMTP_PORT, SMTP_USER, and SMTP_PASS/
+    /RESEND_API_KEY and EMAIL_FROM/
+  );
+  assert.throws(
+    () =>
+      validateRuntimeConfig({
+        NODE_ENV: "production",
+        PORT: "5000",
+        MONGO_URL: "mongodb://localhost:27017/store",
+        JWT_ACCESS_SECRET: "a".repeat(32),
+        FRONTEND_URL: "https://store.example",
+        RESEND_API_KEY: "re_your_new_api_key",
+        EMAIL_FROM: "onboarding@resend.dev",
+      }),
+    /RESEND_API_KEY and EMAIL_FROM/
+  );
+  assert.throws(
+    () =>
+      validateRuntimeConfig({
+        NODE_ENV: "production",
+        PORT: "5000",
+        MONGO_URL: "mongodb://localhost:27017/store",
+        JWT_ACCESS_SECRET: "a".repeat(32),
+        FRONTEND_URL: "https://store.example",
+        RESEND_API_KEY: "re_test_key",
+        EMAIL_FROM: "not-an-email",
+      }),
+    /EMAIL_FROM must be a valid email address/
   );
 });
 

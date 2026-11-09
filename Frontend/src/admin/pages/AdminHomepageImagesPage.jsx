@@ -8,6 +8,7 @@ const SECTIONS = [
   { value: 'category', label: 'Collection fallbacks' },
   { value: 'editorial', label: 'Editorial feature' },
   { value: 'atelier', label: 'Atelier feature' },
+  { value: 'social', label: 'Social gallery' },
 ];
 const SECTION_ORDER = Object.fromEntries(SECTIONS.map(({ value }, index) => [value, index]));
 const MAX_FILE_SIZE = 5 * 1024 * 1024;
@@ -231,7 +232,7 @@ export default function AdminHomepageImagesPage() {
       <div>
         <span className="eyebrow">Storefront imagery</span>
         <h1>Homepage images</h1>
-        <p>Manage the hero carousel and the collection, editorial and atelier images shown on the homepage. Saved changes publish immediately.</p>
+        <p>Manage the hero carousel and collection, editorial, atelier and social gallery images shown on the homepage. Saved changes publish immediately.</p>
       </div>
       <button className="admin-button-primary" type="button" onClick={() => uploadInputRef.current?.click()}>
         <Plus size={17} /> Add images

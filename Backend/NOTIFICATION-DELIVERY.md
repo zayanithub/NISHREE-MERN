@@ -7,11 +7,8 @@ Phase 17 queues transactional customer messages in `NotificationLog` and sends t
 Configure these values in the deployment environment, not in source control:
 
 ```text
-SMTP_HOST=
-SMTP_PORT=
-SMTP_USER=
-SMTP_PASS=
-MAIL_FROM=
+RESEND_API_KEY=
+EMAIL_FROM=onboarding@resend.dev
 FRONTEND_URL=
 
 TWILIO_ACCOUNT_SID=
@@ -35,9 +32,9 @@ WHATSAPP_TEMPLATE_REFUND_UPDATE=
 WHATSAPP_TEMPLATE_PROMOTION_UPDATE=
 ```
 
-Administrator sign-in also requires the SMTP settings above. After a valid admin password, the server emails a one-time code to the administrator's registered email address. The code expires after 10 minutes, allows at most five attempts, and can be resent once per minute. Admin access and refresh cookies are issued only after the code is verified. If SMTP is not configured, admin sign-in fails closed; configure and verify email delivery before deploying the admin portal.
+Administrator sign-in also requires the Resend settings above. After a valid admin password, the server emails a one-time code to the administrator's registered email address. The code expires after 10 minutes, allows at most five attempts, and can be resent once per minute. Admin sign-in and resend requests also have an IP rate limit. Admin access and refresh cookies are issued only after the code is verified. If Resend is not configured, admin sign-in fails closed; configure a verified sender before deploying the admin portal.
 
-The public contact form posts validated messages to `POST /api/v1/contact`. Messages are sent to the support email configured in Store Details and use the sender's validated email as `Reply-To`. Requests are limited to five per IP per 15 minutes; SMTP must be configured for successful delivery.
+The public contact form posts validated messages to `POST /api/v1/contact`. Messages are sent through the Resend HTTPS API to the support email configured in Store Details and use the sender's validated email as `Reply-To`. Requests are limited to five per IP per 15 minutes; the recipient and sender are never chosen freely by the request.
 
 `PUBLIC_API_URL` is the externally reachable HTTPS API origin. Twilio status callbacks are sent to `/api/v1/notification-delivery-webhooks/twilio`; configure the same URL as the incoming-message webhook to receive STOP/START opt-outs. Configure Meta WhatsApp webhooks at `/api/v1/notification-delivery-webhooks/meta`, subscribe to the `messages` field, and use `WHATSAPP_WEBHOOK_VERIFY_TOKEN` during webhook verification. The Meta app secret validates webhook signatures.
 
@@ -55,7 +52,9 @@ Customers manage preferences through `GET/PATCH /api/v1/notifications/preference
 
 ## Retries and operations
 
-Temporary provider errors are retried up to five attempts with capped exponential delays. Permanent provider/configuration errors are marked failed. Admins can inspect deliveries at `GET /api/v1/admin/notifications/deliveries` and request retry at `POST /api/v1/admin/notifications/deliveries/:deliveryId/retry`.
+Temporary provider errors are retried up to five attempts with capped exponential delays. Resend 429 and 5xx responses are retryable; permanent provider/configuration errors are marked failed. Email notification retries reuse a stable Resend idempotency key. Admins can inspect deliveries at `GET /api/v1/admin/notifications/deliveries` and request retry at `POST /api/v1/admin/notifications/deliveries/:deliveryId/retry`.
+
+A notification marked `sent` records provider acceptance and a Resend message ID, not confirmed inbox delivery. Check Resend message logs or configure delivery event webhooks if final delivery/bounce status is needed.
 
 If a worker stops while a provider outcome is unknown, the delivery becomes `uncertain` instead of being retried automatically. Check the provider first; an admin must explicitly submit `{ "confirmUnknownOutcome": true }` to retry and accept the risk of duplicate delivery. A signed provider callback can reconcile an uncertain SMS or WhatsApp delivery to its final status.
 

@@ -3,6 +3,8 @@ import { Router } from "express";
 import {
   getPublicProducts,
   getPublicProductBySlug,
+  getPublicProductFacets,
+  getPublicBestSellingProducts,
 } from "../controllers/productController.js";
 import {
   listPublicProductReviewsController,
@@ -19,6 +21,9 @@ const router = Router();
 */
 
 router.get("/", getPublicProducts);
+
+router.get("/facets", getPublicProductFacets);
+router.get("/best-sellers", getPublicBestSellingProducts);
 
 router.get("/:slug/reviews", listPublicProductReviewsController);
 

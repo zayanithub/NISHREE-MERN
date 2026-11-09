@@ -2,7 +2,7 @@ import { useEffect, useMemo, useRef, useState } from 'react';
 import { z } from 'zod';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { useForm } from 'react-hook-form';
-import { ArrowRight, Check, ChevronLeft, ChevronRight, Copy, Heart, Minus, Plus, Star, Tag, ZoomIn, X } from 'lucide-react';
+import { AlertCircle, ArrowRight, Check, Copy, Heart, LoaderCircle, MapPin, Minus, Plus, ShoppingBag, Star, Tag, Zap } from 'lucide-react';
 import { Link, useLocation, useNavigate, useParams } from 'react-router-dom';
 import { toast } from 'sonner';
 import { catalogApi } from '../api/catalogApi';
@@ -13,10 +13,12 @@ import { useCart } from '../cart/useCart';
 import { useWishlist } from '../wishlist/useWishlist';
 import { ErrorState, LoadingState } from '../components/States';
 import ProductSection from '../components/ProductSection';
+import ProductGallery from '../components/ProductGallery';
 import { formatDate, formatPrice, productImage } from '../utils/format';
-import { getTamilNaduDeliveryEstimate } from '../utils/deliveryEstimate';
 import { currentCouponOffers } from '../utils/couponOffers';
 import { useStoreSettings } from '../settings/useStoreSettings';
+import { recordRecentlyViewedProduct } from '../utils/recentlyViewed';
+import './ProductPage.css';
 
 const reviewSchema = z.object({
   orderId: z.string().min(1, 'Choose the delivered order this review is for.'),
@@ -94,10 +96,8 @@ export default function ProductPage() {
   const [relatedError, setRelatedError] = useState('');
   const [adding, setAdding] = useState(false);
   const [pincode, setPincode] = useState('');
-  const [pincodeMessage, setPincodeMessage] = useState('');
-  const [zoomOpen, setZoomOpen] = useState(false);
+  const [pincodeResult, setPincodeResult] = useState(null);
   const actionLock = useRef(false);
-  const zoomDialogRef = useRef(null);
 
   useEffect(() => {
     const controller = new AbortController();
@@ -115,6 +115,10 @@ export default function ProductPage() {
       .finally(() => { if (!controller.signal.aborted) setLoading(false); });
     return () => controller.abort();
   }, [slug]);
+
+  useEffect(() => {
+    if (product?.slug === slug) recordRecentlyViewedProduct(product.slug);
+  }, [product?.slug, slug]);
 
   useEffect(() => {
     const controller = new AbortController();
@@ -151,13 +155,6 @@ export default function ProductPage() {
   }, [product]);
 
   useEffect(() => {
-    const dialog = zoomDialogRef.current;
-    if (!dialog) return;
-    if (zoomOpen && !dialog.open) dialog.showModal();
-    if (!zoomOpen && dialog.open) dialog.close();
-  }, [zoomOpen]);
-
-  useEffect(() => {
     const controller = new AbortController();
     catalogApi.reviews(slug, { page: 1, limit: 6 }, controller.signal).then((response) => {
       const result = response.data || {};
@@ -172,13 +169,22 @@ export default function ProductPage() {
   const selectedVariant = useMemo(() => product?.variants?.find((variant) => String(variant._id) === String(variantId)), [product, variantId]);
   const currentOffers = useMemo(() => currentCouponOffers(offers, offerTime), [offers, offerTime]);
   const images = useMemo(() => {
-    const values = [...(product?.images || [])];
-    if (product?.primaryImage?.url && !values.some((image) => image.url === product.primaryImage.url)) values.unshift({ url: product.primaryImage.url, altText: product.name, isPrimary: true });
-    return values.filter((image) => image.url);
+    const values = [
+      ...(product?.primaryImage?.url ? [{ ...product.primaryImage, altText: product.imageAltText, isPrimary: true }] : []),
+      ...(product?.images || []),
+      ...(product?.variants || []).map((variant) => variant.image?.url ? variant.image : null).filter(Boolean),
+    ];
+    const seen = new Set();
+    return values.filter((image) => {
+      if (!image?.url || seen.has(image.url)) return false;
+      seen.add(image.url);
+      return true;
+    });
   }, [product]);
-  const activeImageIndex = images.findIndex((image) => image.url === activeImage);
-  const showGalleryImage = (index) => {
-    const image = images[index];
+  const showGalleryImage = (imageUrlOrIndex) => {
+    const image = typeof imageUrlOrIndex === 'number'
+      ? images[imageUrlOrIndex]
+      : images.find((entry) => entry.url === imageUrlOrIndex);
     if (!image) return;
     setActiveImage(image.url);
     setVariantId('');
@@ -232,14 +238,11 @@ export default function ProductPage() {
   const checkPincode = (event) => {
     event.preventDefault();
     const normalized = pincode.trim();
-    if (!/^\d{6}$/.test(normalized)) {
-      setPincodeMessage('Enter a valid six-digit Indian PIN code.');
+    if (!/^[1-9]\d{5}$/.test(normalized)) {
+      setPincodeResult({ status: 'invalid' });
       return;
     }
-    const estimate = getTamilNaduDeliveryEstimate(normalized);
-    setPincodeMessage(estimate
-      ? estimate.message
-      : 'Online delivery estimates are currently available only for Tamil Nadu PIN codes. Please contact us to confirm serviceability for this address.');
+    setPincodeResult({ status: 'unconfirmed', pincode: normalized });
   };
 
   if (loading || loadedSlug !== slug) return <div className="page-loading"><LoadingState label="Unfolding the details…" /></div>;
@@ -248,8 +251,19 @@ export default function ProductPage() {
   return <div className="page-wrap product-detail-page">
     <div className="breadcrumbs"><Link to="/">Home</Link><span>/</span><Link to="/shop">The collection</Link><span>/</span><span>{product.name}</span></div>
     <div className="product-detail-grid">
-      <div className="product-gallery"><div className="product-main-image">{(selectedVariant?.image?.url || activeImage) ? <button className="product-image-trigger" type="button" onClick={() => setZoomOpen(true)} aria-label="Enlarge product image"><img src={selectedVariant?.image?.url || activeImage} alt={product.imageAltText || product.name} fetchPriority="high" decoding="async" width="950" height="1160" /><span><ZoomIn size={15} /> Enlarge</span></button> : <div className="image-placeholder">N</div>}{images.length > 1 && <><button className="product-gallery-arrow is-previous" type="button" aria-label="View previous product image" onClick={() => showGalleryImage(activeImageIndex < 0 ? images.length - 1 : (activeImageIndex - 1 + images.length) % images.length)}><ChevronLeft size={21} aria-hidden="true" /></button><button className="product-gallery-arrow is-next" type="button" aria-label="View next product image" onClick={() => showGalleryImage((activeImageIndex + 1) % images.length)}><ChevronRight size={21} aria-hidden="true" /></button></>}</div>{product.imageCredit && <p className="product-image-credit">Image credit: {product.imageSourceUrl ? <a href={product.imageSourceUrl} target="_blank" rel="noopener noreferrer">{product.imageCredit}</a> : product.imageCredit}</p>}{images.length > 1 && <div className="product-thumbnails" aria-label="Product images">{images.map((image, index) => <button type="button" className={activeImage === image.url ? 'is-active' : ''} key={image._id || image.url} onClick={() => { setActiveImage(image.url); setVariantId(''); }} aria-label={`View image ${index + 1}`} aria-pressed={activeImage === image.url}><img src={image.url} alt="" loading="lazy" decoding="async" width="110" height="135" /></button>)}</div>}</div>
-      <div className="product-detail-copy"><div className="breadcrumbs detail-category"><Link to={`/collections/${product.category?.slug || ''}`}>{product.category?.name || 'Nishree collection'}</Link><span>·</span><span>SKU {product.sku}</span></div><h1>{product.name}</h1>{product.shortDescription && <p className="product-short-description">{product.shortDescription}</p>}
+      <ProductGallery
+        images={images}
+        activeImage={selectedVariant?.image?.url || activeImage}
+        onSelectImage={showGalleryImage}
+        productName={product.name}
+        imageAltText={product.imageAltText}
+        imageCredit={product.imageCredit}
+        imageSourceUrl={product.imageSourceUrl}
+      />
+      <div className="product-detail-copy">
+        <div className="breadcrumbs detail-category"><Link to={`/collections/${product.category?.slug || ''}`}>{product.category?.name || 'Nishree collection'}</Link><span>·</span><span>SKU {product.sku}</span></div>
+        {product.brand && <p className="product-brand">{product.brand}</p>}
+        <h1>{product.name}</h1>{product.shortDescription && <p className="product-short-description">{product.shortDescription}</p>}
         {reviewSummary?.reviewCount > 0 && <a className="review-jump" href="#customer-reviews"><Star size={14} fill="currentColor" /> {Number(reviewSummary.averageRating).toFixed(1)} <span>({reviewSummary.reviewCount} {reviewSummary.reviewCount === 1 ? 'review' : 'reviews'})</span></a>}
         <div className="detail-price"><strong>{formatPrice(currentPrice, product.currency)}</strong>{listPrice > currentPrice && <del>{formatPrice(listPrice, product.currency)}</del>}{savings > 0 && <span className="detail-savings">{savingsPercent}% off · Save {formatPrice(savings, product.currency)}</span>}</div>
         <section className="product-offers" aria-labelledby="product-offers-heading">
@@ -267,15 +281,27 @@ export default function ProductPage() {
         {product.sareeLength && <div className="detail-attribute"><span>Saree length</span><strong>{product.sareeLength}</strong></div>}
         {product.blouseIncluded && <div className="detail-attribute"><span>Blouse</span><strong>{product.blouseType === 'stitched' ? 'Stitched blouse' : product.blouseType === 'unstitched' ? 'Unstitched blouse piece' : 'Included'}</strong></div>}
         {product.variants?.length > 0 && <fieldset className="variant-picker"><legend>Choose an option</legend><div className="variant-options">{product.variants.map((variant) => <button type="button" key={variant._id} className={`variant-option${String(variant._id) === String(variantId) ? ' is-selected' : ''}`} onClick={() => { setVariantId(String(variant._id)); if (variant.image?.url) setActiveImage(variant.image.url); }} aria-pressed={String(variant._id) === String(variantId)}>{variant.colorCode && <span className="variant-swatch" style={{ backgroundColor: variant.colorCode }} />}{variant.name}{variant.blouseOption && <small>{variant.blouseOption.replaceAll('_', ' ')}</small>}</button>)}</div></fieldset>}
-        <div className="purchase-row"><div className="quantity-control"><button type="button" aria-label="Decrease quantity" disabled={quantity <= 1} onClick={() => setQuantity((value) => Math.max(1, value - 1))}><Minus size={15} /></button><span aria-live="polite">{quantity}</span><button type="button" aria-label="Increase quantity" disabled={quantity >= 20 || quantity >= availableQuantity} onClick={() => setQuantity((value) => Math.min(20, availableQuantity, value + 1))}><Plus size={15} /></button></div><button type="button" className="button button-primary" onClick={() => void addToBag()} disabled={adding || availableQuantity < 1 || Boolean(product.variants?.length && !selectedVariant)}>{adding ? 'Adding…' : availableQuantity > 0 ? 'Add to bag' : 'Out of stock'}<ArrowRight size={16} /></button><button type="button" className="button button-buy-now" onClick={() => void addToBag(true)} disabled={adding || availableQuantity < 1 || Boolean(product.variants?.length && !selectedVariant)}>{adding ? 'Please wait…' : 'Buy now'}</button><button type="button" className={`icon-button detail-heart${isSaved ? ' is-saved' : ''}`} onClick={save} aria-label={isSaved ? 'Remove from wishlist' : 'Save to wishlist'} aria-pressed={isSaved}><Heart size={19} fill={isSaved ? 'currentColor' : 'none'} /></button></div>
-        <form className="delivery-checker" onSubmit={checkPincode} noValidate>
-          <label htmlFor="delivery-pincode">Check delivery details</label>
-          <div className="delivery-checker-controls">
-            <input id="delivery-pincode" inputMode="numeric" autoComplete="postal-code" maxLength={6} value={pincode} onChange={(event) => { setPincode(event.target.value.replace(/\D/g, '').slice(0, 6)); setPincodeMessage(''); }} placeholder="Enter 6-digit PIN code" aria-describedby="delivery-pincode-message" />
-            <button type="submit" className="button button-outline">Check delivery estimate</button>
+        <div className="purchase-row">
+          <div className="purchase-quantity-row">
+            <div className="purchase-quantity-heading">
+              <span className="purchase-quantity-label">Product quantity</span>
+              <button type="button" className={`icon-button detail-heart${isSaved ? ' is-saved' : ''}`} onClick={save} aria-label={isSaved ? 'Remove from wishlist' : 'Save to wishlist'} aria-pressed={isSaved}><Heart size={19} fill={isSaved ? 'currentColor' : 'none'} /></button>
+            </div>
+            <div className="quantity-control" role="group" aria-label="Product quantity"><button type="button" aria-label="Decrease quantity" disabled={quantity <= 1} onClick={() => setQuantity((value) => Math.max(1, value - 1))}><Minus size={15} /></button><span aria-live="polite">{quantity}</span><button type="button" aria-label="Increase quantity" disabled={quantity >= 20 || quantity >= availableQuantity} onClick={() => setQuantity((value) => Math.min(20, availableQuantity, value + 1))}><Plus size={15} /></button></div>
           </div>
-          <p id="delivery-pincode-message" className={pincodeMessage ? 'delivery-checker-message' : 'delivery-checker-note'} role="status">{pincodeMessage || 'Chennai is estimated at 2–3 days and other Tamil Nadu districts at 4–5 days. Final PIN-code coverage is confirmed at dispatch.'}</p>
-          <Link to="/contact">Contact Nishree support</Link>
+          <div className="purchase-buttons">
+            <button type="button" className="button button-primary" onClick={() => void addToBag()} disabled={adding || availableQuantity < 1 || Boolean(product.variants?.length && !selectedVariant)} aria-busy={adding}>{adding ? <LoaderCircle className="product-action-spinner" size={17} /> : <ShoppingBag size={17} />}{adding ? 'Adding to bag…' : availableQuantity > 0 ? 'Add to bag' : 'Out of stock'}</button>
+            <button type="button" className="button button-buy-now" onClick={() => void addToBag(true)} disabled={adding || availableQuantity < 1 || Boolean(product.variants?.length && !selectedVariant)} aria-busy={adding}>{adding ? <LoaderCircle className="product-action-spinner" size={17} /> : <Zap size={17} />}{adding ? 'Please wait…' : 'Buy now'}</button>
+          </div>
+        </div>
+        <form className="delivery-checker" onSubmit={checkPincode} noValidate>
+          <label htmlFor="delivery-pincode">Check Delivery Availability</label>
+          <div className="delivery-checker-controls">
+            <div className="delivery-pincode-input"><MapPin size={17} aria-hidden="true" /><input id="delivery-pincode" inputMode="numeric" autoComplete="postal-code" maxLength={6} value={pincode} onChange={(event) => { setPincode(event.target.value.replace(/\D/g, '').slice(0, 6)); setPincodeResult(null); }} placeholder="Enter your 6-digit PIN code" aria-describedby={pincodeResult ? 'delivery-pincode-message' : undefined} /></div>
+            <button type="submit" className="button button-outline"><MapPin size={15} /> Check</button>
+          </div>
+          {pincodeResult?.status === 'invalid' && <p id="delivery-pincode-message" className="delivery-checker-result is-error" role="alert"><AlertCircle size={17} /> Please enter a valid 6-digit PIN code.</p>}
+          {pincodeResult?.status === 'unconfirmed' && <p id="delivery-pincode-message" className="delivery-checker-result is-unconfirmed" role="status"><AlertCircle size={17} /><span>We can’t confirm delivery availability for PIN code {pincodeResult.pincode} online yet. <Link to="/contact">Please contact us</Link> to check.</span></p>}
         </form>
         <div className="product-detail-divider" />
         <details className="detail-accordion" open><summary>About this piece</summary><p>{product.description}</p></details>
@@ -288,9 +314,5 @@ export default function ProductPage() {
       <div className="reviews-layout"><div className="reviews-list">{reviewsLoading || reviewsSlug !== slug ? <LoadingState compact label="Gathering customer reviews…" /> : reviewsError ? <ErrorState message={reviewsError} /> : reviews.length ? reviews.map((review) => <article className="review-card" key={review._id}><div className="review-card-meta"><span>{'★'.repeat(review.rating)}{'☆'.repeat(5 - review.rating)}</span><time dateTime={review.createdAt}>{formatDate(review.createdAt)}</time></div>{review.title && <h3>{review.title}</h3>}<p>{review.comment || 'A customer shared a rating for this piece.'}</p><small>{review.user?.name || 'Nishree customer'}</small></article>) : <div className="review-signin"><p>There are no published reviews for this piece yet.</p><span>Reviews are shown after store moderation.</span></div>}</div><ReviewForm product={product} /></div>
     </section>
     {product.category?.slug && (relatedProducts === null || relatedError || relatedProducts.length > 0) && <ProductSection title="You may also like" kicker="A few more from this edit" products={relatedProducts || []} loading={relatedProducts === null} error={relatedError} onRetry={() => { setRelatedError(''); setRelatedProducts(null); catalogApi.products({ page: 1, limit: 5, category: product.category.slug }).then((response) => setRelatedProducts((response.products || []).filter((item) => String(item._id) !== String(product._id)).slice(0, 4))).catch((requestError) => { setRelatedProducts([]); setRelatedError(normalizeApiError(requestError).message); }); }} link={`/collections/${product.category.slug}`} linkText="View the collection" />}
-    <dialog ref={zoomDialogRef} className="product-image-dialog" aria-label={`Enlarged image of ${product.name}`} onClose={() => setZoomOpen(false)}>
-      <button type="button" className="product-image-dialog-close" onClick={() => setZoomOpen(false)} aria-label="Close enlarged image"><X size={20} /></button>
-      <img src={selectedVariant?.image?.url || activeImage} alt={product.imageAltText || product.name} />
-    </dialog>
   </div>;
 }

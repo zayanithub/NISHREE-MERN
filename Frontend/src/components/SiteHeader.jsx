@@ -19,6 +19,7 @@ import companyLogo from '../assets/Nishree Attire Navbar Logo.png';
 import { ThemeToggle } from '../theme/ThemeContext';
 import { formatDate, formatPrice } from '../utils/format';
 import { currentCouponOffers } from '../utils/couponOffers';
+import SecondaryCategoryNavigation from './SecondaryCategoryNavigation';
 
 /* ----------------------------------
    Announcement Bar
@@ -295,7 +296,13 @@ export default function SiteHeader() {
     openPanel?.name === 'search' &&
     openPanel.locationKey === location.key;
 
-  const onHome = location.pathname === '/';
+  const onHome = location.pathname === '/' || location.pathname === '/home';
+  const isCatalogRoute = location.pathname === '/shop'
+    || location.pathname.startsWith('/collections/');
+  const showSecondaryCategories = location.pathname === '/shop'
+    || location.pathname.startsWith('/collections/')
+    || location.pathname === '/account'
+    || location.pathname.startsWith('/account/');
 
   const accountTo = user
     ? '/account'
@@ -473,6 +480,9 @@ export default function SiteHeader() {
         onHome && !scrolled
           ? 'is-transparent'
           : 'is-solid',
+        showSecondaryCategories
+          ? 'has-secondary-navigation'
+          : '',
       ].join(' ')}
     >
       <AnnouncementBar />
@@ -511,30 +521,15 @@ export default function SiteHeader() {
           />
         </Link>
 
-        {/* Desktop navigation */}
-        <nav
-          className="desktop-navigation"
-          aria-label="Main navigation"
-        >
-          <NavLink to="/shop">
-            The collection
-          </NavLink>
-
-          <Link to="/#new-arrivals">
-            New arrivals
-          </Link>
-
-          <Link to="/#atelier">
-            Our atelier
-          </Link>
-
-          <NavLink to="/about">
-            About us
-          </NavLink>
-
-          <NavLink to="/contact">
-            Contact us
-          </NavLink>
+        <nav className="desktop-navigation" aria-label="Main navigation">
+          <NavLink to="/shop">The collection</NavLink>
+          <NavLink to="/product_hub">Product Hub</NavLink>
+          <NavLink to="/new-arrivals">New arrivals</NavLink>
+          <NavLink to="/find-your-drape">Find Your Drape</NavLink>
+          <NavLink to="/atelier">Our atelier</NavLink>
+          <NavLink to="/about">About us</NavLink>
+          <NavLink to="/contact">Contact us</NavLink>
+          <NavLink to="/blogs">Blogs</NavLink>
         </nav>
 
         {/* Header actions */}
@@ -612,6 +607,8 @@ export default function SiteHeader() {
         </div>
       </div>
 
+      {showSecondaryCategories && <SecondaryCategoryNavigation showCatalogLinks={isCatalogRoute} />}
+
       {/* Expandable search panel */}
       {searchOpen && (
         <form
@@ -685,8 +682,17 @@ export default function SiteHeader() {
           <ArrowRight size={16} aria-hidden="true" />
         </NavLink>
 
+        <NavLink
+          to="/product_hub"
+          tabIndex={menuOpen ? 0 : -1}
+          onClick={closeMobileMenu}
+        >
+          Product Hub
+          <ArrowRight size={16} aria-hidden="true" />
+        </NavLink>
+
         <Link
-          to="/#new-arrivals"
+          to="/new-arrivals"
           tabIndex={menuOpen ? 0 : -1}
           onClick={closeMobileMenu}
         >
@@ -695,7 +701,16 @@ export default function SiteHeader() {
         </Link>
 
         <Link
-          to="/#atelier"
+          to="/find-your-drape"
+          tabIndex={menuOpen ? 0 : -1}
+          onClick={closeMobileMenu}
+        >
+          Find Your Drape
+          <ArrowRight size={16} aria-hidden="true" />
+        </Link>
+
+        <Link
+          to="/atelier"
           tabIndex={menuOpen ? 0 : -1}
           onClick={closeMobileMenu}
         >
@@ -718,6 +733,15 @@ export default function SiteHeader() {
           onClick={closeMobileMenu}
         >
           Contact us
+          <ArrowRight size={16} aria-hidden="true" />
+        </NavLink>
+
+        <NavLink
+          to="/blogs"
+          tabIndex={menuOpen ? 0 : -1}
+          onClick={closeMobileMenu}
+        >
+          Blogs
           <ArrowRight size={16} aria-hidden="true" />
         </NavLink>
 

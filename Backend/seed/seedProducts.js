@@ -4,12 +4,23 @@ import connectDB from '../config/DBconfig.js';
 import Category from '../models/Category.js';
 import Inventory from '../models/Inventory.js';
 import Product from '../models/Product.js';
-import { sareeCatalogueProducts, sareeCategories, validateSareeCatalogue } from './sareeCatalogue.js';
+import ProductImage from '../models/ProductImage.js';
+import { sareeCatalogueProducts, sareeCategories, sareeModelProducts, validateSareeCatalogue } from './sareeCatalogue.js';
 
 export const seedSareeCatalogue = async ({ dryRun = false, refreshImages = false, refreshProducts = false } = {}) => {
   validateSareeCatalogue();
+  const catalogueProducts = [...sareeCatalogueProducts, ...sareeModelProducts];
   if (dryRun) {
-    return { dryRun: true, categories: sareeCategories.length, products: sareeCatalogueProducts.length, initialStock: 0, refreshImages, refreshProducts };
+    return {
+      dryRun: true,
+      categories: sareeCategories.length,
+      products: catalogueProducts.length,
+      modelProducts: sareeModelProducts.length,
+      modelImages: sareeModelProducts.reduce((total, product) => total + product.galleryImages.length, 0),
+      initialStock: 0,
+      refreshImages,
+      refreshProducts,
+    };
   }
   if (!process.env.MONGO_URL) throw new Error('MONGO_URL is missing from the backend environment.');
 
@@ -36,9 +47,9 @@ export const seedSareeCatalogue = async ({ dryRun = false, refreshImages = false
 
   let insertedProducts = 0;
   let existingProducts = 0;
-  for (const sample of sareeCatalogueProducts) {
+  for (const sample of catalogueProducts) {
     const image = {
-      url: sample.imageUrl,
+      url: sample.primaryImageUrl || sample.imageUrl,
       publicId: '',
     };
     const productData = {
@@ -106,6 +117,23 @@ export const seedSareeCatalogue = async ({ dryRun = false, refreshImages = false
       await imageProduct.save();
     }
 
+    if (sample.galleryImages) {
+      for (const galleryImage of sample.galleryImages) {
+        await ProductImage.updateOne(
+          { product: product._id, url: galleryImage.url },
+          {
+            $set: {
+              publicId: `legacy:${product._id}:model-${galleryImage.sortOrder + 1}`,
+              altText: galleryImage.altText,
+              sortOrder: galleryImage.sortOrder,
+              isPrimary: galleryImage.isPrimary,
+            },
+          },
+          { upsert: true, runValidators: true, setDefaultsOnInsert: true },
+        );
+      }
+    }
+
     await Inventory.updateOne(
       { product: product._id, inventoryType: 'product' },
       { $setOnInsert: { quantity: 0, reservedQuantity: 0, lowStockThreshold: 5 } },
@@ -119,8 +147,10 @@ export const seedSareeCatalogue = async ({ dryRun = false, refreshImages = false
     productsInserted: insertedProducts,
     productsAlreadyPresent: existingProducts,
     initialStock: 0,
-    imagesRefreshed: refreshImages ? sareeCatalogueProducts.length : 0,
-    productsRefreshed: refreshProducts ? sareeCatalogueProducts.length : 0,
+    imagesRefreshed: refreshImages ? catalogueProducts.length : 0,
+    productsRefreshed: refreshProducts ? catalogueProducts.length : 0,
+    modelProducts: sareeModelProducts.length,
+    modelImages: sareeModelProducts.reduce((total, product) => total + product.galleryImages.length, 0),
   };
 };
 

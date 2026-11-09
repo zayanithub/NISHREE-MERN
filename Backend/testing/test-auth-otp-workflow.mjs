@@ -1,23 +1,22 @@
 import test from "node:test";
 import assert from "node:assert/strict";
 import bcrypt from "bcryptjs";
-import nodemailer from "nodemailer";
 
 import OTPVerification from "../models/OTPVerification.js";
 import PasswordResetToken from "../models/PasswordResetToken.js";
 import RefreshToken from "../models/RefreshToken.js";
 import User from "../models/User.js";
-import { verifyEmailTransport } from "../service/emailService.js";
 import {
   loginUser,
   requestPasswordReset,
   resetUserPassword,
   verifyPasswordResetOtp,
-  verifyUserLogin,
+  verifyUserEmail,
 } from "../service/authService.js";
 import {
   forgotPasswordSchema,
   otpChallengeSchema,
+  otpResendSchema,
   resetPasswordSchema,
 } from "../validations/authValidation.js";
 
@@ -28,25 +27,19 @@ const query = (value) => ({
   then: (resolve, reject) => Promise.resolve(value).then(resolve, reject),
 });
 
-test("customer login requires email OTP before issuing a session and supports password recovery", async (t) => {
+test("customer login uses password only and preserves password recovery", async (t) => {
   const envKeys = [
     "JWT_ACCESS_SECRET",
-    "SMTP_HOST",
-    "SMTP_PORT",
-    "SMTP_SECURE",
-    "SMTP_USER",
-    "SMTP_PASS",
+    "RESEND_API_KEY",
+    "EMAIL_FROM",
   ];
   const previousEnv = Object.fromEntries(
     envKeys.map((key) => [key, process.env[key]])
   );
   Object.assign(process.env, {
     JWT_ACCESS_SECRET: "auth-test-secret-with-more-than-32-bytes",
-    SMTP_HOST: "smtp.example.test",
-    SMTP_PORT: "465",
-    SMTP_SECURE: "true",
-    SMTP_USER: "sender@example.test",
-    SMTP_PASS: "smtp-test-password",
+    RESEND_API_KEY: "re_auth_test",
+    EMAIL_FROM: "onboarding@resend.dev",
   });
   t.after(() => {
     for (const [key, value] of Object.entries(previousEnv)) {
@@ -61,15 +54,14 @@ test("customer login requires email OTP before issuing a session and supports pa
     email: "customer@example.test",
     phone: null,
     status: "active",
-    isEmailVerified: false,
+    isEmailVerified: true,
     async save() {},
   };
   let storedOtp;
   let resetRecord;
   let sentMessage;
-  let smtpUnavailable = false;
-  let transportOptions;
   const refreshRecords = [];
+  let passwordMatches = true;
 
   t.mock.method(User, "findOne", () => query(user));
   t.mock.method(User, "findById", () => query(user));
@@ -77,7 +69,7 @@ test("customer login requires email OTP before issuing a session and supports pa
     Object.assign(user, update.$set);
     return user;
   });
-  t.mock.method(bcrypt, "compare", async () => true);
+  t.mock.method(bcrypt, "compare", async () => passwordMatches);
   t.mock.method(bcrypt, "hash", async (password) => `hashed:${password}`);
   t.mock.method(OTPVerification, "updateMany", async () => ({ modifiedCount: 1 }));
   t.mock.method(OTPVerification, "create", async (record) => {
@@ -108,45 +100,40 @@ test("customer login requires email OTP before issuing a session and supports pa
     return { _id: "refresh-session" };
   });
   t.mock.method(RefreshToken, "updateMany", async () => ({ modifiedCount: 1 }));
-  t.mock.method(nodemailer, "createTransport", (options) => {
-    transportOptions = options;
-    return {
-      verify: async () => true,
-      sendMail: async (message) => {
-        if (smtpUnavailable) {
-          throw Object.assign(new Error("SMTP authentication failed"), {
-            code: "EAUTH",
-            responseCode: 535,
-          });
-        }
-        sentMessage = message;
-        return { messageId: "auth-email-1" };
-      },
-    };
+  t.mock.method(globalThis, "fetch", async (_url, options) => {
+    sentMessage = JSON.parse(options.body);
+    return new Response(JSON.stringify({ id: "auth-email-1" }), {
+      status: 200,
+      headers: { "content-type": "application/json" },
+    });
   });
+  t.mock.method(console, "error", () => {});
 
-  await verifyEmailTransport();
-  assert.equal(transportOptions.secure, true);
-  assert.equal(transportOptions.auth.user, "sender@example.test");
-  const loginChallenge = await loginUser({
+  const session = await loginUser({
     email: user.email,
     password: "correct-password",
   });
-  assert.equal(loginChallenge.otpRequired, true);
-  assert.equal(loginChallenge.accessToken, undefined);
-  assert.equal(sentMessage.to, user.email);
-  assert.match(sentMessage.text, /\b\d{6}\b/);
-  assert.notEqual(storedOtp.otpHash, sentMessage.text.match(/\b\d{6}\b/)[0]);
-
-  const loginCode = sentMessage.text.match(/\b\d{6}\b/)[0];
-  const session = await verifyUserLogin({
-    challengeId: loginChallenge.challengeId,
-    otp: loginCode,
-  });
   assert.equal(session.user.id, USER_ID);
   assert.equal(typeof session.accessToken, "string");
-  assert.equal(user.isEmailVerified, true);
+  assert.equal(sentMessage, undefined);
+  assert.equal(refreshRecords.length, 1);
+  assert.ok(user.lastLoginAt instanceof Date);
   assert.ok(refreshRecords[0].otpVerifiedAt instanceof Date);
+
+  passwordMatches = false;
+  await assert.rejects(
+    loginUser({ email: user.email, password: "incorrect-password" }),
+    { statusCode: 401 }
+  );
+  passwordMatches = true;
+  user.isEmailVerified = false;
+  await assert.rejects(
+    loginUser({ email: user.email, password: "correct-password" }),
+    { statusCode: 403 }
+  );
+  assert.equal(refreshRecords.length, 1);
+  assert.equal(sentMessage, undefined);
+  user.isEmailVerified = true;
 
   const resetChallenge = await requestPasswordReset(user.email);
   const resetCode = sentMessage.text.match(/\b\d{6}\b/)[0];
@@ -167,16 +154,6 @@ test("customer login requires email OTP before issuing a session and supports pa
   assert.equal(user.passwordHash, "hashed:new-password-123");
   assert.ok(resetRecord.usedAt instanceof Date);
 
-  smtpUnavailable = true;
-  await assert.rejects(
-    loginUser({ email: user.email, password: "correct-password" }),
-    {
-      statusCode: 503,
-      code: "OTP_EMAIL_DELIVERY_FAILED",
-      message: "Verification code email could not be sent. Please try again later.",
-    }
-  );
-  assert.ok(storedOtp.revokedAt instanceof Date);
 });
 
 test("rejects malformed, expired, and incorrect OTP challenges", async (t) => {
@@ -193,6 +170,12 @@ test("rejects malformed, expired, and incorrect OTP challenges", async (t) => {
       otp: "12345",
     }).success,
     false
+  );
+  assert.equal(
+    otpResendSchema.safeParse({
+      challengeId: "507f1f77bcf86cd799439011",
+    }).success,
+    true
   );
   assert.equal(
     forgotPasswordSchema.safeParse({ email: "not-an-email" }).success,
@@ -213,6 +196,16 @@ test("rejects malformed, expired, and incorrect OTP challenges", async (t) => {
   };
   let active = true;
   t.mock.method(OTPVerification, "findOne", () => query(active ? challenge : null));
+  t.mock.method(User, "findById", () => query({
+    _id: USER_ID,
+    name: "Customer",
+    email: "customer@example.test",
+    phone: null,
+    status: "active",
+    isEmailVerified: false,
+    async save() {},
+  }));
+  t.mock.method(RefreshToken, "create", async () => ({ _id: "refresh-session" }));
   t.mock.method(OTPVerification, "findOneAndUpdate", async (filter, update) => {
     assert.equal(filter.attempts, challenge.attempts);
     challenge.attempts += update.$inc.attempts;
@@ -220,7 +213,7 @@ test("rejects malformed, expired, and incorrect OTP challenges", async (t) => {
     return challenge;
   });
   await assert.rejects(
-    verifyUserLogin({
+    verifyUserEmail({
       challengeId: challenge._id,
       otp: "123456",
     }),
@@ -230,7 +223,7 @@ test("rejects malformed, expired, and incorrect OTP challenges", async (t) => {
 
   active = false;
   await assert.rejects(
-    verifyUserLogin({ challengeId: challenge._id, otp: "123456" }),
+    verifyUserEmail({ challengeId: challenge._id, otp: "123456" }),
     { statusCode: 400 }
   );
 });

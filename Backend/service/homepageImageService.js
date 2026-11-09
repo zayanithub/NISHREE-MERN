@@ -2,7 +2,7 @@ import { Readable } from "node:stream";
 import cloudinary, { assertCloudinaryConfigured } from "../config/cloudinary.js";
 import HomepageImage from "../models/HomepageImage.js";
 
-const SECTIONS = ["hero", "category", "editorial", "atelier"];
+const SECTIONS = ["hero", "category", "editorial", "atelier", "social"];
 
 const DEFAULT_IMAGES = [
   { seedKey: "hero-showroom", section: "hero", url: "/homepage-images/showroom.png", title: "Saree showroom", altText: "A welcoming Nishree saree showroom", sortOrder: 0 },

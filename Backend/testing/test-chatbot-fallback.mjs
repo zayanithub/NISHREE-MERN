@@ -76,15 +76,15 @@ test('directs private order tracking to the signed-in order page', () => {
   assert.equal(result.contact, true);
 });
 
-test('states the five-day review process and flags the unresolved transit-damage conflict', () => {
-  assert.match(answer('What is your return and exchange policy?').reply, /within 5 days/i);
+test('explains the seven-day return window and damaged-item reporting requirements', () => {
+  assert.match(answer('What is your return and exchange policy?').reply, /within 7 days of receiving/i);
   const damaged = answer('My saree was damaged in transit, can I return it?');
-  assert.match(damaged.reply, /conflicts with the general damaged-item terms/i);
+  assert.match(damaged.reply, /within 48 hours of delivery/i);
   assert.equal(damaged.contact, true);
 });
 
-test('does not invent shipping estimates and offers support for unknown questions', () => {
-  assert.match(answer('How long does delivery take?').reply, /confirmed delivery date.*not available/i);
+test('explains the published shipping estimate and offers support for unknown questions', () => {
+  assert.match(answer('How long does delivery take?').reply, /5–10 business days after dispatch/i);
   const unknown = answer('Can you tailor a custom blouse?');
   assert.match(unknown.reply, /verified answer/i);
   assert.equal(unknown.contact, true);

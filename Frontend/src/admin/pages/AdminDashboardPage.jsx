@@ -5,12 +5,16 @@ import {
   Boxes,
   CircleAlert,
   ClipboardList,
+  Flower2,
   Package,
+  Sparkles,
   UsersRound,
 } from 'lucide-react';
 import { Link } from 'react-router-dom';
 import { adminApi } from '../adminApi';
 import { formatPrice } from '../../utils/format';
+import dashboardHeroImage from '../../assets/Regal Blush Saree in a Floral Arch.png';
+import './AdminDashboard.css';
 
 const metricCards = [
   { key: 'totalProducts', label: 'Total products', Icon: Package, to: '/admin/products' },
@@ -56,6 +60,12 @@ function SalesChart({ sales, loading, period }) {
           <div className="admin-chart-scroll">
             <svg className="admin-sales-chart" viewBox={`0 0 ${width} ${height}`} role="img" aria-label={`Daily revenue chart for the last ${period === '7d' ? '7' : period === '30d' ? '30' : '90'} days`}>
               <title>Daily revenue</title>
+              <defs>
+                <linearGradient id="admin-sales-area-gradient" x1="0" x2="0" y1="0" y2="1">
+                  <stop offset="0%" stopColor="#9b5b63" stopOpacity=".3" />
+                  <stop offset="100%" stopColor="#d6ad70" stopOpacity=".025" />
+                </linearGradient>
+              </defs>
               {[0, 1, 2, 3].map((step) => {
                 const y = padding.top + step * (height - padding.top - padding.bottom) / 3;
                 const value = maximum * (1 - step / 3);
@@ -74,15 +84,59 @@ function SalesChart({ sales, loading, period }) {
 
 function OrderStatusPanel({ counts, loading }) {
   const total = counts.reduce((sum, item) => sum + Number(item.count || 0), 0);
+  const circumference = 2 * Math.PI * 45;
+  const colors = ['#4a101c', '#9c5e65', '#d6ad70', '#74866c', '#b98971', '#8a7895', '#bd8d4a'];
+  const segments = counts.reduce((result, item, index) => {
+    const value = total ? Number(item.count) / total : 0;
+    const previous = result.at(-1);
+    return [...result, {
+      ...item,
+      color: colors[index % colors.length],
+      value,
+      offset: previous ? previous.offset + previous.value * circumference : 0,
+    }];
+  }, []);
+
   return (
     <section className="admin-panel admin-status-panel" aria-labelledby="status-chart-title">
       <div className="admin-panel-heading"><div><span className="eyebrow">Orders in selected period</span><h2 id="status-chart-title">Order status</h2></div></div>
-      {loading ? <div className="admin-chart-state" role="status">Loading order statuses…</div> : counts.length ? <div className="admin-status-list">
-        {counts.map(({ status, count }) => {
-          const percentage = total ? Math.round(Number(count) / total * 100) : 0;
-          return <div className="admin-status-row" key={status}><div><span>{String(status).replaceAll('_', ' ')}</span><strong>{Number(count).toLocaleString('en-IN')}</strong></div><div className="admin-status-track"><span style={{ width: `${percentage}%` }} /></div></div>;
-        })}
-      </div> : <div className="admin-chart-state">No orders have been recorded in this period.</div>}
+      {loading ? <div className="admin-chart-state" role="status">Loading order statuses…</div> : counts.length ? (
+        <div className="admin-status-visual">
+          <div className="admin-status-donut-wrap">
+            <svg className="admin-status-donut" viewBox="0 0 120 120" role="img" aria-label={`Order status distribution for ${total} orders`}>
+              <circle className="admin-status-donut-track" cx="60" cy="60" r="45" />
+              <g transform="rotate(-90 60 60)">
+                {segments.map(({ status, count, value, offset, color }) => {
+                  return (
+                    <circle
+                      className="admin-status-donut-segment"
+                      key={status}
+                      cx="60"
+                      cy="60"
+                      r="45"
+                      stroke={color}
+                      strokeDasharray={`${value * circumference} ${circumference}`}
+                      strokeDashoffset={-offset}
+                    >
+                      <title>{`${String(status).replaceAll('_', ' ')}: ${Number(count).toLocaleString('en-IN')}`}</title>
+                    </circle>
+                  );
+                })}
+              </g>
+            </svg>
+            <div className="admin-status-donut-total"><strong>{total.toLocaleString('en-IN')}</strong><span>orders</span></div>
+          </div>
+          <div className="admin-status-list">
+            {segments.map(({ status, count, color }) => (
+              <div className="admin-status-row" key={status}>
+                <span className="admin-status-legend-dot" style={{ '--status-color': color }} aria-hidden="true" />
+                <span className="admin-status-label">{String(status).replaceAll('_', ' ')}</span>
+                <strong>{Number(count).toLocaleString('en-IN')}</strong>
+              </div>
+            ))}
+          </div>
+        </div>
+      ) : <div className="admin-chart-state">No orders have been recorded in this period.</div>}
     </section>
   );
 }
@@ -133,15 +187,25 @@ export default function AdminDashboardPage() {
   const metricValues = { ...metrics, cancelledOrders };
   const orderCounts = data?.orderStatusCounts || [];
 
-  return <div className="admin-page">
-    <div className="admin-page-heading">
-      <div><span className="eyebrow">A clear view of the store</span><h1>Overview</h1><p>Live figures from the store catalogue, customer accounts and orders.</p></div>
-      <div className="admin-dashboard-controls">
-        <label htmlFor="dashboard-period">Reporting period</label>
-        <select id="dashboard-period" value={period} onChange={(event) => setPeriod(event.target.value)}>{periods.map(({ value, label }) => <option key={value} value={value}>{label}</option>)}</select>
-        <button type="button" className="admin-button-secondary" onClick={() => setRefreshKey((value) => value + 1)} disabled={loading || salesLoading}>Refresh</button>
+  return <div className="admin-page admin-overview-page">
+    <header className="admin-page-heading admin-overview-hero">
+      <img className="admin-overview-hero-image" src={dashboardHeroImage} alt="" aria-hidden="true" fetchPriority="high" />
+      <div className="admin-overview-hero-shade" aria-hidden="true" />
+      <Flower2 className="admin-overview-lotus admin-overview-lotus-one" size={38} aria-hidden="true" />
+      <Flower2 className="admin-overview-lotus admin-overview-lotus-two" size={23} aria-hidden="true" />
+      <div className="admin-overview-copy">
+        <div className="admin-overview-welcome">
+          <span className="eyebrow"><Sparkles size={13} aria-hidden="true" /> NISHREE ATTIRE · STORE OVERVIEW</span>
+          <h1>Your atelier, at a glance.</h1>
+          <p>Keep track of your collection, orders and customers—all in one place.</p>
+        </div>
+        <div className="admin-dashboard-controls">
+          <label htmlFor="dashboard-period">Reporting period</label>
+          <select id="dashboard-period" value={period} onChange={(event) => setPeriod(event.target.value)}>{periods.map(({ value, label }) => <option key={value} value={value}>{label}</option>)}</select>
+          <button type="button" className="admin-button-secondary" onClick={() => setRefreshKey((value) => value + 1)} disabled={loading || salesLoading}>Refresh</button>
+        </div>
       </div>
-    </div>
+    </header>
     {error.key === requestKey && error.message && <p className="admin-inline-error" role="alert">{error.message}</p>}
     {salesError.key === requestKey && salesError.message && <p className="admin-inline-error" role="alert">{salesError.message}</p>}
     <div className="admin-metric-grid">{metricCards.map(({ key, label, Icon, to }) => <Link className="admin-metric-card" to={to} key={key}><span className="admin-metric-icon"><Icon size={19} /></span><small>{label}</small><strong>{loading ? '—' : Number(metricValues[key] || 0).toLocaleString('en-IN')}</strong><ArrowUpRight size={15} className="admin-metric-arrow" /></Link>)}</div>
@@ -150,14 +214,26 @@ export default function AdminDashboardPage() {
       <SalesChart sales={sales} loading={salesLoading} period={period} />
       <OrderStatusPanel counts={orderCounts} loading={loading} />
     </div>
-    <section className="admin-panel">
+    <section className="admin-panel admin-overview-orders">
       <div className="admin-panel-heading"><div><span className="eyebrow">Recently placed</span><h2>Recent orders</h2></div><Link to="/admin/orders" className="admin-text-link">All orders <ArrowRight size={14} /></Link></div>
       {loading ? <div className="admin-empty-state">Loading the latest orders…</div> : data?.recentOrders?.length ? <div className="admin-table-wrap"><table className="admin-table"><thead><tr><th>Order</th><th>Customer</th><th>Date</th><th>Payment</th><th>Status</th><th>Total</th></tr></thead><tbody>{data.recentOrders.map((order) => <tr key={order._id}><td><Link to={`/admin/orders?order=${order._id}`}>{order.orderNumber}</Link></td><td>{order.customerName}<small>{order.customerEmail}</small></td><td>{new Date(order.createdAt).toLocaleDateString('en-IN')}</td><td>{order.paymentMethod} · {order.paymentStatus}</td><td><span className={`admin-status status-${order.orderStatus}`}>{String(order.orderStatus).replaceAll('_', ' ')}</span></td><td>{formatPrice(order.totalAmount, order.currency)}</td></tr>)}</tbody></table></div> : <div className="admin-empty-state">No orders have been placed yet.</div>}
     </section>
-    <section className="admin-panel">
-      <div className="admin-panel-heading"><div><span className="eyebrow">Best sellers</span><h2>Top products · selected period</h2></div></div>
-      {salesLoading ? <div className="admin-empty-state">Loading best-selling products…</div> : sales?.topProducts?.length ? <div className="admin-top-products">{sales.topProducts.map((product) => <div className="admin-top-product-row" key={product.productId || product.sku}><span><strong>{product.name}</strong><small>{product.sku} · {Number(product.unitsSold).toLocaleString('en-IN')} sold</small></span><b>{formatPrice(product.sales)}</b></div>)}</div> : <div className="admin-empty-state">No product sales are recorded for this period.</div>}
-    </section>
+    <div className="admin-overview-lower-grid">
+      <section className="admin-panel admin-overview-products">
+        <div className="admin-panel-heading"><div><span className="eyebrow">Best sellers</span><h2>Top products · selected period</h2></div></div>
+        {salesLoading ? <div className="admin-empty-state">Loading best-selling products…</div> : sales?.topProducts?.length ? <div className="admin-top-products">{sales.topProducts.map((product) => <div className="admin-top-product-row" key={product.productId || product.sku}><span className="admin-top-product-mark" aria-hidden="true"><Package size={18} /></span><span className="admin-top-product-info"><strong>{product.name}</strong><small>{product.sku} · {Number(product.unitsSold).toLocaleString('en-IN')} sold</small></span><b>{formatPrice(product.sales)}</b></div>)}</div> : <div className="admin-empty-state">No product sales are recorded for this period.</div>}
+      </section>
+      <aside className="admin-overview-promo">
+        <img src={dashboardHeroImage} alt="" aria-hidden="true" loading="lazy" decoding="async" />
+        <div className="admin-overview-promo-shade" aria-hidden="true" />
+        <Flower2 className="admin-overview-promo-lotus" size={34} aria-hidden="true" />
+        <div className="admin-overview-promo-copy">
+          <span>THE NISHREE ATELIER</span>
+          <h2>Nishree — Elevate Your Store with Timeless Elegance</h2>
+          <Link to="/">Explore more <ArrowUpRight size={15} aria-hidden="true" /></Link>
+        </div>
+      </aside>
+    </div>
     <div className="admin-quick-links"><Link to="/admin/products"><Package size={18} /> Manage products <ArrowRight size={15} /></Link><Link to="/admin/inventory"><CircleAlert size={18} /> Review stock levels <ArrowRight size={15} /></Link><Link to="/admin/customers"><UsersRound size={18} /> View customers <ArrowRight size={15} /></Link></div>
   </div>;
 }

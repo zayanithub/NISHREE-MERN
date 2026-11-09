@@ -3,18 +3,23 @@ import {
   ArrowDown,
   ArrowRight,
   ArrowUpRight,
+  ChevronLeft,
+  ChevronRight,
   Flower2,
   HeartHandshake,
   MoveUpRight,
+  Pause,
+  Play,
 } from "lucide-react";
 import { Link } from "react-router-dom";
-import { motion, useReducedMotion } from "framer-motion";
+import { AnimatePresence, motion, useReducedMotion } from "framer-motion";
 
 import { catalogApi } from "../api/catalogApi";
 import { homepageApi } from "../api/homepageApi";
 import { Reveal } from "../components/Reveal";
 import ProductSection from "../components/ProductSection";
 import CataloguePreviewNotice from "../components/CataloguePreviewNotice";
+import HomeDiscoverySections from "../components/home/HomeDiscoverySections";
 import { ErrorState, LoadingState } from "../components/States";
 
 
@@ -37,31 +42,6 @@ const heroImages = [
   { url: "/homepage-images/glass-reflections.png", altText: "A regal saree reflected in glass cubes" },
   { url: "/homepage-images/palace-editorial.png", altText: "A royal blue and ivory saree in a palace" },
 ];
-const getHeroAnimation = (slideCount) => {
-  const count = Math.max(1, slideCount);
-  const transitionSeconds = 5;
-  const slideSeconds = 90 / 7;
-  const durationSeconds = count * slideSeconds;
-  const animationName = `hero-image-drift-${count}`;
-  const frames = ["0% { transform: translateX(0); }"];
-
-  for (let index = 1; index <= count; index += 1) {
-    const position = `${(-index / (count + 1)) * 100}%`;
-    const arrival = ((transitionSeconds + (index - 1) * slideSeconds) / durationSeconds) * 100;
-    const pause = ((index * slideSeconds) / durationSeconds) * 100;
-    frames.push(
-      `${arrival.toFixed(4)}% { transform: translateX(${position}); }`,
-      `${pause.toFixed(4)}% { transform: translateX(${position}); }`,
-    );
-  }
-
-  return {
-    animationName,
-    durationSeconds,
-    keyframes: `@keyframes ${animationName} { ${frames.join(" ")} }`,
-  };
-};
-
 const isCancelledRequest = (error, signal) =>
   signal?.aborted ||
   error?.name === "AbortError" ||
@@ -76,13 +56,12 @@ export default function HomePage() {
   const [categories, setCategories] = useState([]);
   const [categoryStatus, setCategoryStatus] = useState("loading");
 
-  const [newest, setNewest] = useState([]);
-  const [newestStatus, setNewestStatus] = useState("loading");
-
   const [featured, setFeatured] = useState([]);
   const [featuredStatus, setFeaturedStatus] = useState("loading");
   const [homepageImageSections, setHomepageImageSections] = useState({});
   const [homepageImagesLoaded, setHomepageImagesLoaded] = useState(false);
+  const [activeHeroSlide, setActiveHeroSlide] = useState(0);
+  const [heroPaused, setHeroPaused] = useState(false);
 
   const requestControllersRef = useRef({});
 
@@ -94,10 +73,17 @@ export default function HomePage() {
   };
   const heroSlides = imagesForSection("hero", heroImages);
   const visibleHeroSlides = heroSlides.length ? heroSlides : heroImages;
-  const heroAnimation = getHeroAnimation(visibleHeroSlides.length);
+  const activeHeroIndex = activeHeroSlide % visibleHeroSlides.length;
   const categoryImages = imagesForSection("category", categoryArt);
-  const editorialImages = imagesForSection("editorial", [{ url: categoryArt[0], altText: "Golden silk folded to reveal its woven border" }]);
-  const atelierImages = imagesForSection("atelier", [{ url: "/homepage-images/showroom.png", altText: "A warm boutique interior with sarees displayed throughout" }]);
+  const socialImages = imagesForSection("social", []);
+
+  useEffect(() => {
+    if (shouldReduceMotion || heroPaused || visibleHeroSlides.length < 2) return undefined;
+    const timer = window.setInterval(() => {
+      setActiveHeroSlide((index) => (index + 1) % visibleHeroSlides.length);
+    }, 7_000);
+    return () => window.clearInterval(timer);
+  }, [heroPaused, shouldReduceMotion, visibleHeroSlides.length]);
 
   /* ------------------------------------------
      Request controller management
@@ -166,33 +152,6 @@ export default function HomePage() {
   }, []);
 
   /* ------------------------------------------
-     Load newest products
-  ------------------------------------------ */
-
-  const loadNewest = useCallback(async (signal) => {
-    try {
-      const response = await catalogApi.products(
-        {
-          page: 1,
-          limit: 3,
-          sort: "newest",
-        },
-        signal,
-      );
-
-      if (signal.aborted) return;
-
-      setNewest(Array.isArray(response?.products) ? response.products : []);
-
-      setNewestStatus("ready");
-    } catch (error) {
-      if (isCancelledRequest(error, signal)) return;
-
-      setNewestStatus("error");
-    }
-  }, []);
-
-  /* ------------------------------------------
      Load featured products
   ------------------------------------------ */
 
@@ -249,7 +208,6 @@ export default function HomePage() {
   useEffect(() => {
     const controllers = {
       categories: new AbortController(),
-      newest: new AbortController(),
       featured: new AbortController(),
     };
 
@@ -258,7 +216,6 @@ export default function HomePage() {
     const runInitialLoads = async () => {
       await Promise.allSettled([
         loadCategories(controllers.categories.signal),
-        loadNewest(controllers.newest.signal),
         loadFeatured(controllers.featured.signal),
       ]);
     };
@@ -272,7 +229,7 @@ export default function HomePage() {
 
       requestControllersRef.current = {};
     };
-  }, [loadCategories, loadNewest, loadFeatured]);
+  }, [loadCategories, loadFeatured]);
 
   /* ------------------------------------------
      Retry handlers
@@ -285,14 +242,6 @@ export default function HomePage() {
 
     void loadCategories(controller.signal);
   }, [createRequestController, loadCategories]);
-
-  const retryNewest = useCallback(() => {
-    const controller = createRequestController("newest");
-
-    setNewestStatus("loading");
-
-    void loadNewest(controller.signal);
-  }, [createRequestController, loadNewest]);
 
   const retryFeatured = useCallback(() => {
     const controller = createRequestController("featured");
@@ -330,27 +279,21 @@ export default function HomePage() {
       ====================================== */}
 
       <section className="hero" aria-labelledby="hero-title">
-        <style>{heroAnimation.keyframes}</style>
-        <div
-          className="hero-image-track"
-          aria-hidden="true"
-          style={{
-            width: `${(visibleHeroSlides.length + 1) * 100}%`,
-            animationName: heroAnimation.animationName,
-            animationDuration: `${heroAnimation.durationSeconds}s`,
-          }}
-        >
-          {[...visibleHeroSlides, visibleHeroSlides[0]].map((image, index) => (
-            <img
-              key={`${index}-${image._id || image.url}`}
-              src={image.url}
-              alt={image.altText || ""}
-              style={{ flex: `0 0 ${100 / (visibleHeroSlides.length + 1)}%`, width: `${100 / (visibleHeroSlides.length + 1)}%` }}
-              loading={index === 0 ? "eager" : "lazy"}
-              fetchPriority={index === 0 ? "high" : "auto"}
+        <div className="hero-image-track" aria-hidden="true" role="presentation">
+          <AnimatePresence mode="sync" initial={false}>
+            <motion.img
+              key={`${activeHeroIndex}-${visibleHeroSlides[activeHeroIndex]?._id || visibleHeroSlides[activeHeroIndex]?.url}`}
+              src={visibleHeroSlides[activeHeroIndex]?.url}
+              alt=""
+              initial={shouldReduceMotion ? false : { opacity: 0, scale: 1.025 }}
+              animate={{ opacity: 1, scale: 1 }}
+              exit={shouldReduceMotion ? { opacity: 0 } : { opacity: 0, scale: 1.015 }}
+              transition={shouldReduceMotion ? { duration: 0 } : { duration: 1.05, ease: [0.22, 1, 0.36, 1] }}
+              loading={activeHeroIndex === 0 ? "eager" : "lazy"}
+              fetchPriority={activeHeroIndex === 0 ? "high" : "auto"}
               decoding="async"
             />
-          ))}
+          </AnimatePresence>
         </div>
 
         <div className="hero-shade" aria-hidden="true" />
@@ -386,19 +329,35 @@ export default function HomePage() {
                 <ArrowRight size={16} aria-hidden="true" />
               </Link>
 
-              <a href="#new-arrivals" className="hero-secondary">
+              <Link to="/new-arrivals" className="hero-secondary">
                 Discover Nishree
                 <MoveUpRight size={15} aria-hidden="true" />
-              </a>
+              </Link>
             </div>
           </motion.div>
 
           <div className="hero-footnote">
-            <span>01 / 01</span>
+            <span>{String(activeHeroIndex + 1).padStart(2, "0")} / {String(visibleHeroSlides.length).padStart(2, "0")}</span>
 
             <span className="hero-footnote-line" aria-hidden="true" />
 
             <span>Elegance in every thread</span>
+
+            {visibleHeroSlides.length > 1 && (
+              <span className="hero-slide-controls" role="group" aria-label="Hero story controls">
+                <button type="button" onClick={() => setActiveHeroSlide((activeHeroIndex - 1 + visibleHeroSlides.length) % visibleHeroSlides.length)} aria-label="Previous story">
+                  <ChevronLeft size={14} aria-hidden="true" />
+                </button>
+                {!shouldReduceMotion && (
+                  <button type="button" onClick={() => setHeroPaused((paused) => !paused)} aria-label={heroPaused ? "Play hero stories" : "Pause hero stories"} aria-pressed={heroPaused}>
+                    {heroPaused ? <Play size={11} aria-hidden="true" /> : <Pause size={11} aria-hidden="true" />}
+                  </button>
+                )}
+                <button type="button" onClick={() => setActiveHeroSlide((activeHeroIndex + 1) % visibleHeroSlides.length)} aria-label="Next story">
+                  <ChevronRight size={14} aria-hidden="true" />
+                </button>
+              </span>
+            )}
           </div>
         </div>
 
@@ -542,96 +501,11 @@ export default function HomePage() {
       </section>
 
       {/* ======================================
-          NEW ARRIVALS EDITORIAL
-      ====================================== */}
-
-      <section className="new-arrivals-editorial" id="new-arrivals">
-        <Reveal className="new-arrivals-image">
-          {editorialImages[0] && <img
-            src={editorialImages[0].url || editorialImages[0]}
-            alt={editorialImages[0].altText || "Golden silk folded to show its woven border and rich colour"}
-            loading="lazy"
-            decoding="async"
-            width="900"
-            height="900"
-          />}
-
-          <span>THE FIRST LOOK · NISHREE ATTIRE</span>
-        </Reveal>
-
-        <div className="new-arrivals-copy">
-          <Reveal>
-            <span className="eyebrow">The collection, as it unfolds</span>
-
-            <h2>
-              New pieces.
-              <br />
-              <em>Old soul.</em>
-            </h2>
-
-            <p>
-              Discover the latest additions to our collection, selected from the
-              newest pieces available in store.
-            </p>
-
-            <Link className="button button-primary" to="/shop?sort=newest">
-              Meet the new arrivals
-              <ArrowRight size={16} aria-hidden="true" />
-            </Link>
-          </Reveal>
-
-          {newestStatus === "loading" ? (
-            <LoadingState label="Finding the newest pieces…" compact />
-          ) : newestStatus === "error" ? (
-            <ErrorState
-              message="The newest pieces are unavailable just now."
-              onRetry={retryNewest}
-            />
-          ) : newest.length > 0 ? (
-            <div className="new-arrival-list">
-              {newest.slice(0, 2).map((product, index) => (
-                <Link
-                  to={`/products/${product.slug}`}
-                  key={product._id ?? product.slug}
-                  className="new-arrival-item"
-                >
-                  <img
-                    src={product.primaryImage?.url || categoryImages[index % categoryImages.length]?.url || categoryImages[index % categoryImages.length]}
-                    alt={product.primaryImage?.url ? "" : categoryImages[index % categoryImages.length]?.altText || ""}
-                    loading="lazy"
-                    decoding="async"
-                    width="96"
-                    height="112"
-                  />
-
-                  <span>
-                    <small>
-                      {product.material ||
-                        product.category?.name ||
-                        "NEW PIECE"}
-                    </small>
-
-                    <strong>{product.name}</strong>
-                  </span>
-
-                  <ArrowUpRight size={17} aria-hidden="true" />
-                </Link>
-              ))}
-            </div>
-          ) : (
-            <p className="quiet-note">
-              The newest pieces will appear here as they join the collection.
-            </p>
-          )}
-        </div>
-      </section>
-
-      {/* ======================================
           FEATURED PRODUCTS
       ====================================== */}
 
       <ProductSection
-        title="Pieces to remember"
+        title="Exclusive picks"
         kicker="A considered collection"
         products={featured}
         loading={featuredStatus === "loading"}
@@ -644,59 +518,10 @@ export default function HomePage() {
         linkText="Explore all sarees"
       />
 
-      {/* ======================================
-          ATELIER EDITORIAL
-      ====================================== */}
-
-      <section className="atelier-section" id="atelier">
-        <div className="atelier-visual">
-          <div className="atelier-photo-frame">
-            {atelierImages[0] && <img
-              src={atelierImages[0].url || atelierImages[0]}
-              alt={atelierImages[0].altText || "A warm boutique interior with sarees displayed throughout"}
-              loading="lazy"
-              decoding="async"
-              width="1024"
-              height="1024"
-            />}
-            <span className="atelier-image-caption">
-              <span>THE NISHREE ATELIER</span>
-              <span>A PLACE FOR THE BEAUTIFUL</span>
-            </span>
-            <div className="atelier-medallion" aria-label="Thoughtfully chosen, beautifully yours">
-              <span>N</span>
-              <small>CHOSEN<br />WITH CARE</small>
-            </div>
-          </div>
-        </div>
-
-        <Reveal className="atelier-copy">
-          <span className="eyebrow">A little more personal</span>
-          <h2>
-            Find the one that feels <em>like you.</em>
-          </h2>
-          <p className="atelier-lead">
-            Some sarees simply feel right. Find yours in a space made for
-            taking your time, exploring every detail, and enjoying the moment.
-          </p>
-          <p className="atelier-description">
-            At Nishree, thoughtful edits and a warm welcome make choosing
-            something special feel effortless—from the first look to the final
-            drape.
-          </p>
-          <div className="atelier-promises" aria-label="The Nishree atelier experience">
-            <span><i aria-hidden="true">01</i> Considered collections</span>
-            <span><i aria-hidden="true">02</i> A warm, personal welcome</span>
-          </div>
-          <div className="atelier-actions">
-            <Link to="/shop" className="button button-primary">
-              Explore the collection
-              <ArrowRight size={16} aria-hidden="true" />
-            </Link>
-            <Link to="/contact" className="atelier-contact-link">Get in touch</Link>
-          </div>
-        </Reveal>
-      </section>
+      <HomeDiscoverySections
+        featured={featured}
+        socialImages={socialImages}
+      />
 
       {/* ======================================
           CLOSING CALL TO ACTION

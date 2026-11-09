@@ -1,19 +1,15 @@
 import test from "node:test";
 import assert from "node:assert/strict";
-import nodemailer from "nodemailer";
 import StoreSettings from "../models/StoreSettings.js";
 import { submitContactMessageController } from "../controllers/contactController.js";
 import { contactMessageSchema } from "../validations/contactValidation.js";
 
 test("contact form validates fields and sends only to the configured store support email", async (t) => {
-  const envKeys = ["SMTP_HOST", "SMTP_PORT", "SMTP_SECURE", "SMTP_USER", "SMTP_PASS"];
+  const envKeys = ["RESEND_API_KEY", "EMAIL_FROM"];
   const previousEnv = Object.fromEntries(envKeys.map((key) => [key, process.env[key]]));
   Object.assign(process.env, {
-    SMTP_HOST: "smtp.example.test",
-    SMTP_PORT: "465",
-    SMTP_SECURE: "true",
-    SMTP_USER: "sender@example.test",
-    SMTP_PASS: "smtp-test-password",
+    RESEND_API_KEY: "re_contact_test",
+    EMAIL_FROM: "onboarding@resend.dev",
   });
   t.after(() => {
     for (const [key, value] of Object.entries(previousEnv)) {
@@ -33,12 +29,14 @@ test("contact form validates fields and sends only to the configured store suppo
   t.mock.method(StoreSettings, "findOne", () => ({
     lean: async () => ({ supportEmail: "configured@nishree.example" }),
   }));
-  t.mock.method(nodemailer, "createTransport", () => ({
-    sendMail: async (message) => {
-      sentMessage = message;
-      return { messageId: "contact-message-1" };
-    },
-  }));
+  t.mock.method(globalThis, "fetch", async (_url, options) => {
+    sentMessage = JSON.parse(options.body);
+    return new Response(JSON.stringify({ id: "contact-message-1" }), {
+      status: 200,
+      headers: { "content-type": "application/json" },
+    });
+  });
+  t.mock.method(console, "info", () => {});
 
   let responseStatus;
   let responseBody;
@@ -60,7 +58,7 @@ test("contact form validates fields and sends only to the configured store suppo
   assert.equal(responseStatus, 200);
   assert.equal(responseBody.success, true);
   assert.equal(sentMessage.to, "configured@nishree.example");
-  assert.equal(sentMessage.replyTo, "customer@example.test");
+  assert.equal(sentMessage.reply_to, "customer@example.test");
   assert.match(sentMessage.text, /Nishree Customer/);
   assert.match(sentMessage.text, /recent order/);
 });
