@@ -3,7 +3,8 @@ import { createPortal } from 'react-dom';
 import { ArrowDownRight, ArrowRight, ChevronDown, X } from 'lucide-react';
 import { AnimatePresence, motion, useReducedMotion } from 'framer-motion';
 import { Link, useLocation } from 'react-router-dom';
-import { allCollections, collectionNavigation } from '../data/collectionCatalog';
+import { allCollections } from '../data/collectionCatalog';
+import { catalogApi } from '../api/catalogApi';
 import './SecondaryCategoryNavigation.css';
 
 const closeDelay = 150;
@@ -217,15 +218,48 @@ export default function SecondaryCategoryNavigation({ showCatalogLinks = false }
   const menuButtonRefs = useRef(new Map());
   const inputModalityRef = useRef('pointer');
   const mobileModeRef = useRef(window.matchMedia('(max-width: 800px)').matches);
+  const [availableCollections, setAvailableCollections] = useState([]);
+  const [categoryError, setCategoryError] = useState('');
   const [menuState, setMenuState] = useState(null);
   const openMenu = menuState?.locationKey === location.key ? menuState : null;
-  const openCollection = collectionNavigation.find((item) => item.slug === openMenu?.slug);
+  const openCollection = availableCollections.find((item) => item.slug === openMenu?.slug);
   const mobileCollection = openMenu?.source === 'mobile' ? openCollection : null;
   const currentSlug = location.pathname.startsWith('/collections/')
     ? location.pathname.split('/')[2]
     : null;
-  const currentCollection = allCollections.find((item) => item.slug === currentSlug);
+  const currentCollection = availableCollections.find((item) => item.slug === currentSlug);
   const currentParentSlug = currentCollection?.parent?.slug || currentCollection?.slug;
+
+  useEffect(() => {
+    const controller = new AbortController();
+    catalogApi.allCategories(controller.signal)
+      .then((response) => {
+        if (controller.signal.aborted) return;
+        const collections = (response.categories || [])
+          .filter((category) => Number(category.productCount) > 0)
+          .map((category, index) => {
+            const fallback = allCollections[index % allCollections.length];
+            const image = category.image?.url || fallback.image;
+            return {
+              ...fallback,
+              ...category,
+              image,
+              bannerImage: image,
+              children: [],
+              menuEnabled: true,
+              parent: null,
+            };
+          });
+        setAvailableCollections(collections);
+        setCategoryError('');
+      })
+      .catch((error) => {
+        if (error.name !== 'CanceledError' && error.name !== 'AbortError' && error.code !== 'ERR_CANCELED') {
+          setCategoryError(error.response?.data?.message || 'Categories could not be loaded.');
+        }
+      });
+    return () => controller.abort();
+  }, []);
 
   const cancelClose = useCallback(() => {
     window.clearTimeout(closeTimerRef.current);
@@ -339,7 +373,8 @@ export default function SecondaryCategoryNavigation({ showCatalogLinks = false }
               </li>
             </>
           )}
-          {collectionNavigation.map((category, index) => {
+          {categoryError && <li className="secondary-category-load-error" role="status" title={categoryError}>Categories unavailable</li>}
+          {availableCollections.map((category, index) => {
             const isOpen = openMenu?.slug === category.slug;
             const canOpenMenu = category.menuEnabled;
             const isActive = currentParentSlug === category.slug;

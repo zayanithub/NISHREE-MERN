@@ -89,7 +89,7 @@ export const sareeProductImageSources = [
 
 const slugify = (value) => value.toLowerCase().normalize('NFKD').replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '');
 
-export const sareeCatalogueProducts = concepts.map((concept, index) => {
+const baseSareeCatalogueProducts = concepts.map((concept, index) => {
   const image = sareeProductImageSources[index];
   const sku = `NIA-SAMPLE-${String(index + 1).padStart(3, '0')}`;
   const imageTitle = image.title.replace(/^File:/, '').replace(/\.[^.]+$/, '').replace(/[_-]+/g, ' ');
@@ -125,6 +125,59 @@ export const sareeCatalogueProducts = concepts.map((concept, index) => {
     blouseType: 'none',
   };
 });
+
+const affordablePreviewPrices = [1390, 1890, 2390, 2890, 3390, 3890, 4390, 4890, 5390, 5890];
+
+const categoryPreviewProducts = sareeCategories.flatMap((category, categoryIndex) => {
+  const existingAffordableCount = baseSareeCatalogueProducts.filter((product) =>
+    product.categorySlug === category.slug
+    && product.status === 'active'
+    && product.basePrice >= 1000
+    && product.basePrice <= 6000,
+  ).length;
+  const productsToAdd = Math.max(0, 10 - existingAffordableCount);
+
+  return Array.from({ length: productsToAdd }, (_, index) => {
+    const sequence = index + 1;
+    const image = sareeProductImageSources[(categoryIndex * 10 + index) % sareeProductImageSources.length];
+    const imageTitle = image.title.replace(/^File:/, '').replace(/\.[^.]+$/, '').replace(/[_-]+/g, ' ');
+    const name = `${category.name.replace(/ sarees?$/i, '')} Preview Saree ${String(sequence).padStart(2, '0')}`;
+    const price = affordablePreviewPrices[index];
+
+    return {
+      name,
+      slug: `preview-${category.slug}-${String(sequence).padStart(2, '0')}`,
+      sku: `NIA-PREVIEW-${String(categoryIndex + 1).padStart(3, '0')}-${String(sequence).padStart(2, '0')}`,
+      categorySlug: category.slug,
+      material: 'Details to be confirmed',
+      color: 'Unverified',
+      description: `Illustrative ${category.name.toLowerCase()} catalogue preview using a reference image. Product identity, material, weave, colour, measurements, price, and availability have not been verified. This listing is out of stock and must be reviewed before it is offered for sale.`,
+      shortDescription: `Illustrative catalogue preview. Product details and price are unverified; this listing is out of stock.`,
+      fabricCare: 'Not verified. Confirm the supplier care instructions before offering for sale.',
+      occasion: ['Collection preview'],
+      tags: ['catalogue-preview', 'stock-unverified', 'price-unverified', 'new-arrival', category.slug],
+      basePrice: price,
+      salePrice: null,
+      currency: 'INR',
+      imageUrl: image.storefrontUrl,
+      imageAltText: `Illustrative saree reference image: ${imageTitle}. Product match and shade are not verified.`,
+      imageCredit: image.sourceUrl ? `${image.credit || 'Wikimedia Commons contributor'} · Wikimedia Commons · ${image.license}` : image.credit,
+      imageLicense: image.license,
+      imageSourceUrl: image.sourceUrl,
+      availableQuantity: 0,
+      stockIsVerified: false,
+      status: 'active',
+      isFeatured: sequence === 1,
+      isNewArrival: true,
+      brand: 'Nishree Attire',
+      sareeLength: '',
+      blouseIncluded: false,
+      blouseType: 'none',
+    };
+  });
+});
+
+export const sareeCatalogueProducts = [...baseSareeCatalogueProducts, ...categoryPreviewProducts];
 
 const modelSareeStyles = [
   { name: 'Sandal Rose Model Saree', color: 'Sandal rose', files: ['Model_Sandal_rose_1.jpg', 'Model_Sandal_rose_2.jpg', 'Model_Sandal_rose_3.jpg'] },
@@ -216,7 +269,7 @@ export const validateModelSareeProducts = () => {
 export const validateSareeCatalogue = () => {
   const unique = (values) => new Set(values).size === values.length;
   validateModelSareeProducts();
-  if (sareeCatalogueProducts.length !== 50) throw new Error(`Expected 50 catalogue products, received ${sareeCatalogueProducts.length}.`);
+  if (baseSareeCatalogueProducts.length !== 50) throw new Error(`Expected 50 base catalogue products, received ${baseSareeCatalogueProducts.length}.`);
   if (!unique(sareeCatalogueProducts.map((product) => product.sku))) throw new Error('Catalogue SKUs must be unique.');
   if (!unique(sareeCatalogueProducts.map((product) => product.slug))) throw new Error('Catalogue slugs must be unique.');
   if (!unique(sareeProductImageSources.map((image) => image.storefrontUrl))) throw new Error('Catalogue image URLs must be unique.');
@@ -224,6 +277,22 @@ export const validateSareeCatalogue = () => {
     if (!product.name || !product.description || !product.shortDescription || !product.imageAltText) throw new Error(`Product ${product.sku} is missing required catalogue copy.`);
     if (product.basePrice <= 0 || (product.salePrice != null && product.salePrice > product.basePrice)) throw new Error(`Product ${product.sku} has an invalid price.`);
     if (product.availableQuantity !== 0 || product.stockIsVerified) throw new Error(`Sample product ${product.sku} must not claim verified stock.`);
+  }
+  for (const category of sareeCategories) {
+    const affordableProducts = sareeCatalogueProducts.filter((product) =>
+      product.categorySlug === category.slug
+      && product.status === 'active'
+      && product.basePrice >= 1000
+      && product.basePrice <= 6000,
+    );
+    if (affordableProducts.length < 10) {
+      throw new Error(`Category ${category.slug} needs at least 10 active preview products priced from INR 1,000 to INR 6,000.`);
+    }
+  }
+  for (const product of categoryPreviewProducts) {
+    if (!product.tags.includes('price-unverified') || product.availableQuantity !== 0 || product.status !== 'active') {
+      throw new Error(`Category preview ${product.sku} must clearly disclose its unverified price and zero stock.`);
+    }
   }
   return true;
 };

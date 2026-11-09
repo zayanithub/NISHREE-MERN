@@ -361,3 +361,33 @@
   .product-hub-page *::before,
   .product-hub-page *::after { scroll-behavior: auto !important; transition-duration: .01ms !important; animation-duration: .01ms !important; animation-iteration-count: 1 !important; }
 }
+
+.hub-live-categories { width: min(1480px, calc(100% - 104px)); margin: 48px auto 62px; }
+.hub-live-categories .hub-section-title h2 { color: #331f1a; }
+.hub-live-categories .hub-section-title > p { color: var(--hub-muted); }
+.hub-category-tile.is-selected { border-color: var(--hub-deep); box-shadow: 0 0 0 2px rgba(156, 8, 35, .2); }
+.hub-live-error { color: #9c0823; font-size: 13px; }
+.hub-live-empty { color: var(--hub-muted); font-size: 13px; }
+.hub-live-product-grid { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 18px; padding-top: 20px; }
+.hub-live-pagination { display: flex; align-items: center; justify-content: center; gap: 18px; margin-top: 30px; }
+.hub-live-pagination > span { color: var(--hub-muted); font-size: 12px; }
+.hub-live-pagination .hub-primary-cta:disabled { opacity: .48; cursor: not-allowed; }
+.hub-live-empty { padding: 48px 20px; text-align: center; }
+.hub-live-empty h3 { margin: 10px 0; color: var(--hub-ink); font-family: var(--serif, Georgia, serif); font-size: 30px; }
+.hub-live-empty p { color: var(--hub-muted); font-size: 13px; }
+.hub-live-empty button { margin-top: 12px; padding: 10px 16px; border: 1px solid #9c0823; background: #9c0823; color: white; cursor: pointer; }
+@media (max-width: 1250px) {
+  .hub-live-categories { width: calc(100% - 64px); }
+}
+
+@media (max-width: 820px) {
+  .hub-live-product-grid { grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 12px; }
+}
+
+@media (max-width: 600px) {
+  .hub-live-categories { width: calc(100% - 28px); margin-block: 35px 42px; }
+  .hub-live-product-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 9px; }
+  .hub-live-pagination { gap: 9px; }
+  .hub-live-pagination .hub-primary-cta { min-height: 40px; gap: 8px; padding-inline: 11px; font-size: 9px; }
+  .hub-live-empty h3 { font-size: 25px; }
+}

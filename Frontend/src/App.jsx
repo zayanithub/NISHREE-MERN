@@ -11,6 +11,7 @@ import { StoreSettingsProvider } from './settings/StoreSettingsContext';
 import { AdminAuthProvider } from './admin/AdminAuthContext';
 import AdminProtectedRoute from './admin/AdminProtectedRoute';
 import { ThemeProvider } from './theme/ThemeContext';
+import RouteSeo from './components/RouteSeo';
 
 const HomePage = lazy(() => import('./pages/HomePage'));
 const NewArrivalsPage = lazy(() => import('./pages/NewArrivalsPage'));
@@ -68,6 +69,7 @@ function LegacyHomeRoute() {
 function AppRoutes() {
   const location = useLocation();
   return <>
+    <RouteSeo />
     <Suspense fallback={<div className="route-fallback" role="status"><span className="eyebrow">NISHREE ATTIRE</span><span>Unfolding the collection…</span></div>}><Routes>
       <Route element={<StorefrontLayout />}>
         <Route index element={<HomePage />} />

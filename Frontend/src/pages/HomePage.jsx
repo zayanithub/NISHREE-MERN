@@ -108,41 +108,18 @@ export default function HomePage() {
       const response = await catalogApi.categories(
         {
           page: 1,
-          limit: 4,
+          limit: 100,
         },
         signal,
       );
 
       if (signal.aborted) return;
 
-      const availableCategories = Array.isArray(response?.categories)
-        ? response.categories
-        : [];
-
-      const categoriesWithProducts = await Promise.all(
-        availableCategories.map(async (category) => {
-          if (!category?.slug) return null;
-
-          const productResponse = await catalogApi.products(
-            {
-              page: 1,
-              limit: 1,
-              category: category.slug,
-            },
-            signal,
-          );
-
-          if (signal.aborted) return null;
-
-          const totalProducts = Number(productResponse?.pagination?.total ?? 0);
-
-          return totalProducts > 0 ? category : null;
-        }),
+      setCategories(
+        (Array.isArray(response?.categories) ? response.categories : [])
+          .filter((category) => Number(category.productCount) > 0)
+          .slice(0, 4),
       );
-
-      if (signal.aborted) return;
-
-      setCategories(categoriesWithProducts.filter(Boolean));
       setCategoryStatus("ready");
     } catch (error) {
       if (isCancelledRequest(error, signal)) return;

@@ -194,6 +194,28 @@ export const listCategories = async ({
     ];
   }
 
+  const productCounts = await Product.aggregate([
+    {
+      $match: includeInactive
+        ? {}
+        : { status: "active" },
+    },
+    {
+      $group: {
+        _id: "$category",
+        productCount: { $sum: 1 },
+      },
+    },
+  ]);
+  const productCountByCategory = new Map(
+    productCounts.map((entry) => [String(entry._id), entry.productCount])
+  );
+  if (!includeInactive) {
+    filter._id = {
+      $in: productCounts.map((entry) => entry._id),
+    };
+  }
+
   const skip = (currentPage - 1) * pageSize;
 
   const [categories, total] = await Promise.all([
@@ -208,7 +230,10 @@ export const listCategories = async ({
   ]);
 
   return {
-    categories,
+    categories: categories.map((category) => ({
+      ...category,
+      productCount: productCountByCategory.get(String(category._id)) || 0,
+    })),
     pagination: {
       page: currentPage,
       limit: pageSize,
@@ -254,6 +279,18 @@ export const getCategoryBySlug = async (
     .lean();
 
   if (!category) {
+    throw createError(
+      "Category not found.",
+      404
+    );
+  }
+
+  const hasActiveProducts = await Product.exists({
+    category: category._id,
+    status: "active",
+  });
+
+  if (!hasActiveProducts) {
     throw createError(
       "Category not found.",
       404

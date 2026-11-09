@@ -299,9 +299,7 @@ export default function SiteHeader() {
   const onHome = location.pathname === '/' || location.pathname === '/home';
   const isCatalogRoute = location.pathname === '/shop'
     || location.pathname.startsWith('/collections/');
-  const showSecondaryCategories = location.pathname === '/shop'
-    || location.pathname.startsWith('/collections/')
-    || location.pathname === '/account'
+  const showSecondaryCategories = location.pathname === '/account'
     || location.pathname.startsWith('/account/');
 
   const accountTo = user

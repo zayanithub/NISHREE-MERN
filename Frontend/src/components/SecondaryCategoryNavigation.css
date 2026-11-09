@@ -649,6 +649,8 @@
   }
 }
 
+.secondary-category-load-error { align-self: center; color: #9c0823; font-size: 10px; white-space: nowrap; }
+
 @media (max-width: 1080px) {
   .secondary-category-scroll {
     width: calc(100% - 44px);

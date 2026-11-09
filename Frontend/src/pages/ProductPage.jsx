@@ -18,6 +18,7 @@ import { formatDate, formatPrice, productImage } from '../utils/format';
 import { currentCouponOffers } from '../utils/couponOffers';
 import { useStoreSettings } from '../settings/useStoreSettings';
 import { recordRecentlyViewedProduct } from '../utils/recentlyViewed';
+import { SITE_ORIGIN, useSeoMeta } from '../utils/seo';
 import './ProductPage.css';
 
 const reviewSchema = z.object({
@@ -196,6 +197,56 @@ export default function ProductPage() {
   const availableQuantity = Number(selectedVariant?.availableQuantity ?? product?.availableQuantity ?? 0);
   const isCataloguePreview = product?.tags?.includes('catalogue-preview');
   const isSaved = product ? has(product._id) : false;
+  const productDescription = product
+    ? product.seoDescription || product.shortDescription || product.description
+    : 'Explore saree details, fabric and availability at Nishree Attire.';
+  const productStructuredData = useMemo(() => {
+    if (!product) return undefined;
+    return {
+      '@context': 'https://schema.org',
+      '@type': 'Product',
+      name: product.name,
+      description: productDescription,
+      sku: product.sku,
+      image: images.map((image) => image.url),
+      category: product.category?.name,
+      material: product.material || undefined,
+      color: product.color || undefined,
+      brand: {
+        '@type': 'Brand',
+        name: product.brand || 'Nishree Attire',
+      },
+      offers: {
+        '@type': 'Offer',
+        url: `${SITE_ORIGIN}/products/${encodeURIComponent(product.slug)}`,
+        priceCurrency: product.currency || 'INR',
+        price: Number(product.salePrice ?? product.basePrice ?? 0),
+        availability: availableQuantity > 0
+          ? 'https://schema.org/InStock'
+          : 'https://schema.org/OutOfStock',
+        itemCondition: 'https://schema.org/NewCondition',
+      },
+      ...(reviewSummary?.reviewCount > 0 ? {
+        aggregateRating: {
+          '@type': 'AggregateRating',
+          ratingValue: Number(reviewSummary.averageRating),
+          reviewCount: Number(reviewSummary.reviewCount),
+        },
+      } : {}),
+    };
+  }, [availableQuantity, images, product, productDescription, reviewSummary]);
+
+  useSeoMeta({
+    title: product
+      ? `${product.seoTitle || product.name} | Nishree Attire`
+      : 'Saree Details | Nishree Attire',
+    description: productDescription,
+    path: `/products/${encodeURIComponent(product?.slug || slug)}`,
+    image: images[0]?.url || '/homepage-images/saree-flatlay.jpg',
+    type: 'product',
+    robots: !product || isCataloguePreview ? 'noindex,follow' : 'index,follow',
+    structuredData: productStructuredData,
+  });
 
   useEffect(() => {
     const nextExpiry = currentOffers

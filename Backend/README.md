@@ -2,7 +2,7 @@
 
 The API is the existing Express, Mongoose and MongoDB backend for the Vite storefront. Run these commands from `Backend`.
 
-For production Render and Vercel configuration, OTP email troubleshooting, verification and rollback, see the [deployment guide](../DEPLOYMENT.md).
+For production Render and Vercel configuration, generated SEO sitemap setup, OTP email troubleshooting, verification and rollback, see the [deployment guide](../DEPLOYMENT.md).
 
 ## Local development
 
@@ -10,7 +10,7 @@ For production Render and Vercel configuration, OTP email troubleshooting, verif
 npm.cmd run dev
 ```
 
-Copy `.env.example` to `.env` and set `MONGO_URL`, `JWT_ACCESS_SECRET`, `RESEND_API_KEY`, and `EMAIL_FROM`. Google sign-in is enabled only when `GOOGLE_CLIENT_ID`, `GOOGLE_CLIENT_SECRET`, and `GOOGLE_CALLBACK_URL` are configured. Register the callback URL exactly in the Google Cloud OAuth client; locally it is `http://localhost:5000/api/v1/auth/google/callback`. In production, use the storefront proxy URL `https://nishree.in/api/v1/auth/google/callback` so the OAuth state cookie remains first-party. Keep the client secret on the backend, never in a `VITE_` variable. `RESEND_API_KEY` and the sender address are also backend-only. Production startup requires both Resend variables. Signup verification, Google sign-in verification, admin sign-in, password recovery, contact notifications, and transactional notifications use the centralized Resend HTTPS API service. Existing branded templates remain in place; `MAIL_LOGO_URL` and `SUPPORT_EMAIL` configure their optional branding/footer.
+Copy `.env.example` to `.env` and set `MONGO_URL`, `JWT_ACCESS_SECRET`, `RESEND_API_KEY`, and `EMAIL_FROM`. Google sign-in is enabled only when `GOOGLE_CLIENT_ID`, `GOOGLE_CLIENT_SECRET`, and `GOOGLE_CALLBACK_URL` are configured. Register the callback URL exactly in the Google Cloud OAuth client; locally it is `http://localhost:5000/api/v1/auth/google/callback`. In production, use the storefront proxy URL `https://www.nishree.in/api/v1/auth/google/callback` so the OAuth state cookie remains first-party. Keep the client secret on the backend, never in a `VITE_` variable. `RESEND_API_KEY` and the sender address are also backend-only. Production startup requires both Resend variables. Signup verification, Google sign-in verification, admin sign-in, password recovery, contact notifications, and transactional notifications use the centralized Resend HTTPS API service. Existing branded templates remain in place; `MAIL_LOGO_URL` and `SUPPORT_EMAIL` configure their optional branding/footer.
 
 ## Resend email setup and testing
 
@@ -33,7 +33,7 @@ Troubleshooting:
 - No request ID in logs: check backend network access to `https://api.resend.com` and the request timeout.
 - Check the destination inbox and Resend message logs separately; an accepted request is not a delivery receipt.
 
-Never put database, JWT, or provider credentials in a `VITE_` variable. Production frontend builds use a same-origin Vercel rewrite from `/api/*` to the Render API so browser refresh and guest-cart cookies remain first-party; set `FRONTEND_URL=https://nishree.in` for CORS. Local development uses `FRONTEND_URL=http://localhost:5173`.
+Never put database, JWT, or provider credentials in a `VITE_` variable. Production frontend builds use a same-origin Vercel rewrite from `/api/*` to the Render API so browser refresh and guest-cart cookies remain first-party; set `FRONTEND_URL=https://www.nishree.in` for CORS. Local development uses `FRONTEND_URL=http://localhost:5173`.
 
 Customer signup requires email OTP verification before an authenticated session is created. Verified customer accounts sign in directly with email and password; unverified accounts are denied until the signup code is verified. Google sign-in verifies Google's ID token on the backend and then requires a separate Resend email OTP before creating a customer session. Google users are matched by Google's verified email, and never receive admin privileges. Customer OTP resends are rate-limited. Admin sign-in continues to require email OTP, and admin permissions are loaded from the active database role on protected requests. Password recovery uses a separate OTP followed by a one-time, expiring password-reset token. OTPs expire after 10 minutes, allow at most five attempts, and are stored as keyed hashes.
 
@@ -69,9 +69,9 @@ npm.cmd run seed:products -- --dry-run
 npm.cmd run seed:products
 ```
 
-The dry run validates the 50 records without connecting to MongoDB. The normal command upserts 9 categories and 50 `NIA-SAMPLE-###` products by their unique slugs and SKUs. It creates missing product inventory records at quantity zero. Rerunning it never resets inventory or overwrites products already present, so product content and stock can be edited in Admin.
+The dry run validates all 135 records without connecting to MongoDB. The normal command upserts 9 categories and 125 active catalogue listings (50 base products plus category previews) and adds 10 draft model-photo listings, matching products by SKU. Each category has at least 10 active listings priced from INR 1,000 to INR 6,000. It creates missing product inventory records at quantity zero. Rerunning it never resets inventory or overwrites products already present, so product content and stock can be edited in Admin.
 
-If the checked-in image mapping changes, `npm.cmd run seed:products -- --refresh-images` refreshes only image URLs, alt text and attribution. `npm.cmd run seed:products -- --refresh-sample-catalogue` refreshes the 50 sample product details and images from the seed file. Both options leave inventory quantities unchanged; the catalogue refresh can replace admin edits to those sample product records.
+If the checked-in image mapping changes, `npm.cmd run seed:products -- --refresh-images` refreshes only image URLs, alt text and attribution. `npm.cmd run seed:products -- --refresh-sample-catalogue` refreshes all 135 seeded product details and images from the seed file. Both options leave inventory quantities unchanged; the catalogue refresh can replace admin edits to those seeded product records.
 
 These listings are illustrative catalogue previews. Their prices, image matches, fabric details and availability are not verified stock. The site labels them as previews, and every seeded inventory quantity starts at zero. Confirm the real product, image, price and stock in Admin before offering it for purchase. Replace or remove the sample records when the verified catalogue is ready.
 

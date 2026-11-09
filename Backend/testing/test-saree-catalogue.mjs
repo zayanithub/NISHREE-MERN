@@ -15,13 +15,14 @@ import { seedSareeCatalogue } from '../seed/seedProducts.js';
 const publicImageDirectory = join(dirname(fileURLToPath(import.meta.url)), '../../Frontend/public/catalogue-preview');
 const publicModelImageDirectory = join(dirname(fileURLToPath(import.meta.url)), '../../Frontend/public/catalogue-models');
 
-test('sample saree catalogue contains 50 unique, richly described product records', () => {
+test('sample saree catalogue contains 125 unique, richly described product records', () => {
   assert.equal(validateSareeCatalogue(), true);
-  assert.equal(sareeCatalogueProducts.length, 50);
+  assert.equal(sareeCatalogueProducts.length, 125);
   assert.equal(sareeProductImageSources.length, 50);
-  assert.equal(new Set(sareeCatalogueProducts.map((product) => product.sku)).size, 50);
-  assert.equal(new Set(sareeCatalogueProducts.map((product) => product.slug)).size, 50);
-  assert.equal(new Set(sareeCatalogueProducts.map((product) => product.imageUrl)).size, 50);
+  assert.equal(new Set(sareeCatalogueProducts.map((product) => product.sku)).size, 125);
+  assert.equal(new Set(sareeCatalogueProducts.map((product) => product.slug)).size, 125);
+  const imageUrls = new Set(sareeProductImageSources.map((image) => image.storefrontUrl));
+  assert.ok(sareeCatalogueProducts.every((product) => imageUrls.has(product.imageUrl)));
   for (const product of sareeCatalogueProducts) {
     assert.ok(product.description.length > 120, `${product.sku} should have a detailed description`);
     assert.ok(product.shortDescription.length > 40, `${product.sku} should have a short description`);
@@ -30,6 +31,21 @@ test('sample saree catalogue contains 50 unique, richly described product record
     assert.equal(product.currency, 'INR');
     assert.equal(product.availableQuantity, 0);
     assert.equal(product.tags.includes('catalogue-preview'), true);
+  }
+});
+
+test('every category has at least ten active catalogue previews priced from INR 1,000 to INR 6,000', () => {
+  for (const categorySlug of new Set(sareeCatalogueProducts.map((product) => product.categorySlug))) {
+    const affordableProducts = sareeCatalogueProducts.filter((product) =>
+      product.categorySlug === categorySlug
+      && product.status === 'active'
+      && product.basePrice >= 1000
+      && product.basePrice <= 6000,
+    );
+    assert.ok(affordableProducts.length >= 10, `${categorySlug} should have at least ten affordable products`);
+    assert.ok(affordableProducts.filter((product) => product.slug.startsWith('preview-')).every((product) =>
+      product.tags.includes('price-unverified') && product.availableQuantity === 0,
+    ));
   }
 });
 
@@ -46,7 +62,7 @@ test('model saree photos are grouped into ten zero-stock draft products', () => 
   }
 });
 
-test('all 50 seeded product image files exist and have a supported image signature', () => {
+test('all catalogue preview image files exist and have a supported image signature', () => {
   for (const image of sareeProductImageSources) {
     const path = join(publicImageDirectory, image.fileName);
     const bytes = readFileSync(path);
@@ -71,7 +87,7 @@ test('catalogue seed dry run validates the dataset without connecting to MongoDB
   assert.deepEqual(result, {
     dryRun: true,
     categories: 9,
-    products: 60,
+    products: 135,
     modelProducts: 10,
     modelImages: 30,
     initialStock: 0,

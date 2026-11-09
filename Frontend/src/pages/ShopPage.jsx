@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from 'react';
-import { useSearchParams, useParams, Link } from 'react-router-dom';
+import { useSearchParams, useParams, useLocation, Link } from 'react-router-dom';
 import { ArrowLeft, ArrowRight, SlidersHorizontal, X } from 'lucide-react';
 import { catalogApi } from '../api/catalogApi';
 import ProductCard from '../components/ProductCard';
@@ -9,6 +9,7 @@ import CollectionPage from '../components/CollectionPage';
 import ShopLanding from '../components/ShopLanding';
 import { collectionBySlug } from '../data/collectionCatalog';
 import festiveCollectionImage from '../assets/Royal Diwali Saree by the Palace.png';
+import { useSeoMeta } from '../utils/seo';
 
 const sortValues = ['newest', 'oldest', 'featured', 'name-asc', 'name-desc', 'price-asc', 'price-desc'];
 const emptyLandingStatuses = {
@@ -24,6 +25,7 @@ const isCancelledRequest = (error, signal) => signal?.aborted
 
 export default function ShopPage() {
   const { slug } = useParams();
+  const location = useLocation();
   const collection = slug ? collectionBySlug.get(slug) : null;
   const [searchParams, setSearchParams] = useSearchParams();
   const [categories, setCategories] = useState(() => verifiedCategoriesCache?.categories || []);
@@ -71,18 +73,11 @@ export default function ShopPage() {
     if (slug) return undefined;
     if (verifiedCategoriesCache) return undefined;
     const controller = new AbortController();
-    Promise.all([
-      catalogApi.categories({ page: 1, limit: 100 }, controller.signal),
-      catalogApi.products({ page: 1, limit: 100, sort: 'newest' }, controller.signal),
-    ])
-      .then(([categoryResponse, productResponse]) => {
+    catalogApi.allCategories(controller.signal)
+      .then((categoryResponse) => {
         if (controller.signal.aborted) return;
-        const products = Array.isArray(productResponse.products) ? productResponse.products : [];
-        const categoryIdsWithProducts = new Set(products
-          .map((product) => String(product.category?._id || product.category || ''))
-          .filter(Boolean));
         const availableCategories = (categoryResponse.categories || [])
-          .filter((item) => categoryIdsWithProducts.has(String(item._id)));
+          .filter((item) => Number(item.productCount) > 0);
         verifiedCategoriesCache = { categories: availableCategories };
         setCategories(availableCategories);
         setCategoryError('');
@@ -162,24 +157,16 @@ export default function ShopPage() {
     return () => controller.abort();
   }, [page, currentSearch, currentCategory, currentMaterial, currentOccasion, currentColor, minPrice, maxPrice, available, sort, slug, collection, attempt]);
 
-  useEffect(() => {
-    if (!slug) return undefined;
-    const previousTitle = document.title;
-    const existingDescription = document.querySelector('meta[name="description"]');
-    const descriptionTag = existingDescription || document.createElement('meta');
-    const previousDescription = existingDescription?.content;
-    if (!existingDescription) {
-      descriptionTag.name = 'description';
-      document.head.appendChild(descriptionTag);
-    }
-    document.title = collection?.seoTitle || category?.seoTitle || `${category?.name || 'Saree collection'} | Nishree Attire`;
-    descriptionTag.content = collection?.seoDescription || category?.seoDescription || category?.description || 'Discover sarees selected by Nishree Attire.';
-    return () => {
-      document.title = previousTitle;
-      if (existingDescription) existingDescription.content = previousDescription;
-      else descriptionTag.remove();
-    };
-  }, [slug, collection, category]);
+  useSeoMeta({
+    title: slug
+      ? collection?.seoTitle || category?.seoTitle || `${category?.name || 'Saree collection'} | Nishree Attire`
+      : 'Shop Sarees Online | Nishree Attire',
+    description: slug
+      ? collection?.seoDescription || category?.seoDescription || category?.description || 'Discover sarees selected by Nishree Attire.'
+      : 'Shop sarees online at Nishree Attire. Explore silk, cotton and designer sarees selected for thoughtful style and graceful draping.',
+    path: location.pathname,
+    robots: searchParams.toString() ? 'noindex,follow' : 'index,follow',
+  });
 
   const activeFilterCount = useMemo(() => [currentSearch, !collection && currentCategory, currentMaterial, currentOccasion, currentColor, minPrice, maxPrice, available].filter(Boolean).length, [currentSearch, currentCategory, currentMaterial, currentOccasion, currentColor, minPrice, maxPrice, available, collection]);
   const apply = (event) => {

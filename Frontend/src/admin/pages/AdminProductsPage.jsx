@@ -25,11 +25,13 @@ export default function AdminProductsPage() {
   const [products, setProducts] = useState([]);
   const [categories, setCategories] = useState([]);
   const [search, setSearch] = useState('');
-  const [statusFilter, setStatusFilter] = useState('active');
+  const [statusFilter, setStatusFilter] = useState('all');
   const [page, setPage] = useState(1);
   const [pagination, setPagination] = useState({ page: 1, totalPages: 1, total: 0 });
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
+  const [categoryError, setCategoryError] = useState('');
+  const [imageReportError, setImageReportError] = useState('');
   const [editing, setEditing] = useState(null);
   const [modalOpen, setModalOpen] = useState(false);
   const [form, setForm] = useState(emptyForm);
@@ -82,17 +84,32 @@ export default function AdminProductsPage() {
 
   const load = useCallback(async () => {
     try {
-      const [result, categoryResult, report] = await Promise.all([
+      const [productResult, categoryResult, reportResult] = await Promise.allSettled([
         adminApi.products({ page, limit: 20, search: search || undefined, status: statusFilter }),
-        adminApi.categories({ page: 1, limit: 100 }),
+        adminApi.allCategories(),
         adminApi.productImageCompletion({ page: 1, limit: 100 }),
       ]);
-      setProducts(result.products || []);
-      setPagination(result.pagination || { page, totalPages: 1, total: (result.products || []).length });
-      setCategories(categoryResult.categories || []);
-      setImageReport(report || { products: [], pagination: { total: 0 } });
-      setError('');
-    } catch (requestError) { setError(requestError.response?.data?.message || 'Products could not be loaded.'); }
+      if (productResult.status === 'fulfilled') {
+        setProducts(productResult.value.products || []);
+        setPagination(productResult.value.pagination || { page, totalPages: 1, total: (productResult.value.products || []).length });
+        setError('');
+      } else {
+        setError(productResult.reason.response?.data?.message || 'Products could not be loaded.');
+      }
+      if (categoryResult.status === 'fulfilled') {
+        setCategories(categoryResult.value.categories || []);
+        setCategoryError('');
+      } else {
+        setCategoryError(categoryResult.reason.response?.data?.message || 'Categories could not be loaded.');
+      }
+      if (reportResult.status === 'fulfilled') {
+        setImageReport(reportResult.value || { products: [], pagination: { total: 0 } });
+        setImageReportError('');
+      } else {
+        setImageReport({ products: [], pagination: { total: 0 } });
+        setImageReportError(reportResult.reason.response?.data?.message || 'Product photo status could not be loaded.');
+      }
+    }
     finally { setLoading(false); }
   }, [page, search, statusFilter]);
   useEffect(() => {
@@ -289,6 +306,8 @@ export default function AdminProductsPage() {
   return <div className="admin-page"><div className="admin-page-heading"><div><span className="eyebrow">Catalogue and availability</span><h1>Products</h1><p>Add, edit, feature, archive and stock the saree catalogue.</p></div><div className="admin-heading-actions"><AdminDataTools filename="nishree-products" columns={productColumns} rows={products} loadRows={exportFilteredProducts} disabled={!products.length} /><button className="admin-button-primary" type="button" onClick={openNew}><Plus size={17} /> Add product</button></div></div>
     <div className="admin-toolbar"><form className="admin-search" onSubmit={(event) => { event.preventDefault(); setPage(1); void load(); }}><Search size={17} /><input value={search} onChange={(event) => { setSearch(event.target.value); setPage(1); }} placeholder="Search products by name or SKU" aria-label="Search products" /><button type="submit">Search</button></form><label>Status<select value={statusFilter} onChange={(event) => { setStatusFilter(event.target.value); setPage(1); }}><option value="active">Active</option><option value="draft">Draft</option><option value="archived">Archived</option><option value="all">All products</option></select></label></div>
     {error && <p className="admin-inline-error" role="alert">{error}</p>}
+    {categoryError && <p className="admin-inline-error" role="alert">{categoryError} Product listing remains available, but category assignment may be unavailable.</p>}
+    {imageReportError && <p className="admin-inline-error" role="alert">{imageReportError}</p>}
     {imageReport.pagination?.total > 0 && <section className="admin-image-completion-report" aria-labelledby="image-completion-title">
       <div><h2 id="image-completion-title">Product photos needing attention</h2><p>{imageReport.pagination.total} product{imageReport.pagination.total === 1 ? '' : 's'} currently have fewer than 4 unique images or need a primary-image check.</p></div>
       <div className="admin-image-completion-list">{imageReport.products.map((item) => <article key={item._id}><div><strong>{item.name || 'Untitled product'}</strong><small>{item.sku || 'No SKU'} · {item.uniqueImageCount} unique of 4 minimum · {item.primaryImageCount} primary · {item.status}</small></div><button className="admin-button-secondary" type="button" onClick={() => void openReportedProduct(item)}>Add photos</button></article>)}</div>

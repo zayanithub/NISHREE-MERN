@@ -57,6 +57,7 @@ import adminHomepageImageRoutes from "./routes/admin/homepageImageRoutes.js";
 import newsletterRoutes from "./routes/newsletterRoutes.js";
 import blogPostRoutes from "./routes/blogPostRoutes.js";
 import adminBlogPostRoutes from "./routes/admin/blogPostRoutes.js";
+import { getSitemap } from "./controllers/seoController.js";
 
 const app = express();
 
@@ -116,6 +117,7 @@ const adminLoginLimiter = rateLimit({
 app.use("/api/v1/payments/razorpay/webhook", apiLimiter, razorpayWebhookRoutes);
 
 app.use("/api", apiLimiter);
+app.get("/api/seo/sitemap.xml", getSitemap);
 
 app.use(
   express.json({

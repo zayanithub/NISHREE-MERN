@@ -24,25 +24,25 @@ Set or verify these environment variables in the Render service. Enter secrets d
 | Variable | Value / guidance |
 | --- | --- |
 | `NODE_ENV` | `production` |
-| `FRONTEND_URL` | `https://nishree.in` (origin only; no trailing slash) |
+| `FRONTEND_URL` | `https://www.nishree.in` (origin only; no trailing slash) |
 | `MONGO_URL` | Existing production MongoDB URI; do not replace the database |
 | `JWT_ACCESS_SECRET` | A private random secret, at least 32 bytes. Rotating it signs out active users. |
 | `COOKIE_SAME_SITE` | `lax` |
 | `GOOGLE_CLIENT_ID` | OAuth 2.0 Web application client ID from Google Cloud |
 | `GOOGLE_CLIENT_SECRET` | Backend-only Google OAuth client secret; never add to Vercel or a `VITE_` variable |
-| `GOOGLE_CALLBACK_URL` | `https://nishree.in/api/v1/auth/google/callback` (same-origin Vercel API proxy) |
+| `GOOGLE_CALLBACK_URL` | `https://www.nishree.in/api/v1/auth/google/callback` (same-origin Vercel API proxy) |
 | `RESEND_API_KEY` | Backend-only Resend API key with email-sending permission |
 | `EMAIL_FROM` | `onboarding@resend.dev` for supported tests, or an address at your verified production domain |
 | `CLOUDINARY_CLOUD_NAME` | Cloudinary cloud name, required for persistent uploads |
 | `CLOUDINARY_API_KEY` | Cloudinary API key |
 | `CLOUDINARY_API_SECRET` | Cloudinary API secret |
-| `PUBLIC_API_URL` | `https://nishree-mern-backend.onrender.com` when provider callbacks need the public API origin |
+| `PUBLIC_API_URL` | `https://nishree-mern.onrender.com` when provider callbacks need the public API origin |
 | `RAZORPAY_KEY_ID` / `RAZORPAY_KEY_SECRET` | Matching keys from the intended Razorpay mode; keep the secret only on Render |
 | `RAZORPAY_WEBHOOK_SECRET` | The same webhook signing secret configured in Razorpay |
 
 Keep the existing production values for credentials and optional notification providers. Do not copy example or test values over working production settings. Render supplies `PORT`; do not hardcode a different port.
 
-Create a Google OAuth 2.0 **Web application** client and add the exact production callback URL from `GOOGLE_CALLBACK_URL` to its authorized redirect URIs. Use the storefront's same-origin `/api/v1` proxy for the production callback so the OAuth state cookie is set and returned on the same host; the Vercel rewrite forwards the callback to Render. Set all three Google variables in Render. For local development, use `http://localhost:5000/api/v1/auth/google/callback` as the callback and configure the local frontend origin in `FRONTEND_URL`. The API handles the authorization code exchange and Google ID-token verification; the client secret must never be exposed to the browser. After Google verifies an account identity, the customer must also verify a one-time code sent through the existing Resend HTTPS API before an application session is issued.
+Create a Google OAuth 2.0 **Web application** client and add the exact production callback URL from `GOOGLE_CALLBACK_URL` to its authorized redirect URIs if Google sign-in is enabled. Use the storefront's same-origin `/api/v1` proxy for the production callback so the OAuth state cookie is set and returned on the same host; the Vercel rewrite forwards the callback to Render. Set all three Google variables in Render only when using Google sign-in. For local development, use `http://localhost:5000/api/v1/auth/google/callback` as the callback and configure the local frontend origin in `FRONTEND_URL`. The API handles the authorization code exchange and Google ID-token verification; the client secret must never be exposed to the browser. After Google verifies an account identity, the customer must also verify a one-time code sent through the existing Resend HTTPS API before an application session is issued.
 
 ### Fix `JWT_ACCESS_SECRET must contain at least 32 bytes`
 
@@ -61,7 +61,7 @@ The repository has no `.npmrc` setting this option, so check the Render service'
 After changing environment variables, save them and wait for the Render deploy to finish. Check the service logs for startup/database/email errors, then confirm:
 
 ```text
-https://nishree-mern-backend.onrender.com/api/health
+https://nishree-mern.onrender.com/api/health
 ```
 
 It should return HTTP 200 and `"database":"Connected"`.
@@ -80,7 +80,7 @@ The Resend Free transactional plan currently allows 3,000 emails per month and 1
 
 ## 2. Vercel storefront
 
-In Vercel, open the project serving `nishree.in` and confirm:
+In Vercel, open the project serving `www.nishree.in` and confirm:
 
 | Setting | Value |
 | --- | --- |
@@ -94,22 +94,36 @@ In Vercel, open the project serving `nishree.in` and confirm:
 
 The Vercel project root must be `Frontend` so Vercel reads `Frontend/vercel.json`. Trigger a deployment from the latest `main` commit after changing project settings. No API secret or `VITE_` credential is needed in Vercel; production API requests use same-origin `/api/v1`.
 
-Confirm `nishree.in` is assigned to this Vercel project and the deployment is marked **Ready**. Open deployment build logs if it fails.
+Confirm `www.nishree.in` is assigned to this Vercel project and the deployment is marked **Ready**. If both apex and `www` domains are configured, redirect the apex to `www` in one direction only. Do not configure a reverse redirect at the DNS provider or another proxy. Open deployment build logs if it fails.
 
-## 3. Safe verification
+## 3. Search engine optimization
+
+The frontend serves `/robots.txt` from `Frontend/public/robots.txt`. Vercel rewrites `/sitemap.xml` to the backend's `/api/seo/sitemap.xml` endpoint, which generates XML from the public site pages, active categories and products, and currently published, unexpired journal posts. Catalogue-preview products and private account/admin paths are excluded. The sitemap endpoint needs the backend deployment and MongoDB to be healthy.
+
+The storefront sets a canonical URL, page-specific title and description, Open Graph/Twitter share metadata, and Product/Article JSON-LD as public routes load. The public canonical origin is `https://www.nishree.in`; keep it aligned with the single Vercel Production domain and set Render `FRONTEND_URL=https://www.nishree.in`. If choosing a different canonical domain, update the SEO origin in both `Frontend/src/utils/seo.js` and `Backend/utils/sitemap.js`, the sitemap URL in `Frontend/public/robots.txt`, the static tags in `Frontend/index.html`, and the Render `FRONTEND_URL` together.
+
+After both latest deployments are **Ready** and the domain redirect resolves to `www`:
+
+1. Open `https://www.nishree.in/robots.txt` and confirm it loads as plain text with the sitemap URL.
+2. Open `https://www.nishree.in/sitemap.xml`; confirm HTTP 200 and XML `<urlset>` entries for public pages, products and published journal posts.
+3. In Google Search Console, verify the `nishree.in` Domain property using the DNS TXT record Search Console provides. Once verified, submit `https://www.nishree.in/sitemap.xml` under **Sitemaps**.
+4. Use **URL Inspection** on the homepage and a representative product and journal URL; request indexing after checking canonical selection, page rendering, and any crawl errors.
+5. After changing the domain, check Vercel Domains and DNS redirect rules to ensure there is only one canonical direction and no `www` ↔ apex loop.
+
+## 4. Safe verification
 
 After both services are ready:
 
-1. Open `https://nishree.in/api/health`; expect HTTP 200 and a connected database.
-2. Open `https://nishree.in/login`, a collection URL, a product URL, and `/admin/login` directly, then refresh each. Expect the storefront to load, not a hosting 404/503.
-3. In browser developer tools, confirm API calls use `https://nishree.in/api/v1/...`, not localhost or a direct cross-site API hostname.
+1. Open `https://www.nishree.in/api/health`; expect HTTP 200 and a connected database.
+2. Open `https://www.nishree.in/login`, a collection URL, a product URL, and `/admin/login` directly, then refresh each. Expect the storefront to load, not a hosting 404/503.
+3. In browser developer tools, confirm API calls use `https://www.nishree.in/api/v1/...`, not localhost or a direct cross-site API hostname.
 4. Confirm product images load and the browser has no CORS or failed-request errors.
 5. Test signup/admin OTP with authorized test accounts and inboxes, and test customer login with email/password only. Do not create real orders, refunds, or inventory changes as a connectivity test.
 6. Only test payment-provider callbacks with the provider's test mode and a controlled test order.
 
-The deployed API's `OPTIONS` preflight should allow `https://nishree.in` with credentials and the requested authorization/content headers. Keep Render `FRONTEND_URL` aligned with that exact origin.
+The deployed API's `OPTIONS` preflight should allow `https://www.nishree.in` with credentials and the requested authorization/content headers. Keep Render `FRONTEND_URL` aligned with that exact origin.
 
-## 4. Rollback
+## 5. Rollback
 
 - **Vercel:** use the Deployments page to promote the last known-good frontend deployment.
 - **Render:** redeploy the last known-good backend deploy. Preserve its environment variables.

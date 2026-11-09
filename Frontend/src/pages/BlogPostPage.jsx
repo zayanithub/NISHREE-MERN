@@ -5,6 +5,7 @@ import { Link, useParams } from 'react-router-dom';
 import { blogApi } from '../api/blogApi';
 import { useSavedBlogPosts, readingTime, shareBlogPost } from '../utils/blogExperience';
 import { formatDate } from '../utils/format';
+import { SITE_ORIGIN, useSeoMeta } from '../utils/seo';
 import './BlogPostPage.css';
 
 function ContentBlock({ block, index, imageAlt }) {
@@ -32,6 +33,41 @@ export default function BlogPostPage() {
   const isLoading = loadedKey !== requestKey;
   const post = result?.post;
 
+  useSeoMeta({
+    title: post ? `${post.title} | Nishree Attire Journal` : 'Nishree Attire Journal',
+    description: post?.excerpt || 'Read stories, guides and inspiration from Nishree Attire.',
+    path: `/blogs/${encodeURIComponent(post?.slug || slug)}`,
+    image: post?.heroImage || '/homepage-images/saree-flatlay.jpg',
+    type: 'article',
+    robots: post ? 'index,follow' : 'noindex,follow',
+    structuredData: post ? {
+      '@context': 'https://schema.org',
+      '@type': 'Article',
+      headline: post.title,
+      description: post.excerpt,
+      image: post.heroImage ? [post.heroImage] : undefined,
+      datePublished: post.publishAt ? new Date(post.publishAt).toISOString() : undefined,
+      dateModified: post.updatedAt
+        ? new Date(post.updatedAt).toISOString()
+        : post.publishAt
+          ? new Date(post.publishAt).toISOString()
+          : undefined,
+      author: {
+        '@type': 'Person',
+        name: post.author || 'Nishree Attire',
+      },
+      publisher: {
+        '@type': 'Organization',
+        name: 'Nishree Attire',
+        logo: {
+          '@type': 'ImageObject',
+          url: `${SITE_ORIGIN}/favicon.svg`,
+        },
+      },
+      mainEntityOfPage: `${SITE_ORIGIN}/blogs/${encodeURIComponent(post.slug)}`,
+    } : undefined,
+  });
+
   useEffect(() => {
     const controller = new AbortController();
     blogApi.post(slug, controller.signal)
@@ -48,22 +84,6 @@ export default function BlogPostPage() {
       });
     return () => controller.abort();
   }, [requestKey, slug]);
-
-  useEffect(() => {
-    if (!post) return undefined;
-    const previousTitle = document.title;
-    const description = document.querySelector('meta[name="description"]');
-    const previousDescription = description?.content;
-    const descriptionTag = description || document.createElement('meta');
-    document.title = `${post.title} | Nishree Attire Journal`;
-    descriptionTag.content = post.excerpt;
-    if (!description) document.head.appendChild(descriptionTag);
-    return () => {
-      document.title = previousTitle;
-      if (description) description.content = previousDescription;
-      else descriptionTag.remove();
-    };
-  }, [post]);
 
   if (isLoading) return <main className="journal-detail-page"><div className="journal-detail-state" role="status">Unfolding the story…</div></main>;
   if (error || !post) return <main className="journal-detail-page"><section className="journal-detail-state" role={error ? 'alert' : 'status'}><span className="eyebrow">A page turned</span><h1>{error || 'This story is not available.'}</h1>{error && <button className="button button-outline" type="button" onClick={() => setRetry((value) => value + 1)}>Try again</button>}<Link className="text-link" to="/blogs"><ArrowLeft size={15} /> Back to the journal</Link></section></main>;

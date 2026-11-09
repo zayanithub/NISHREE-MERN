@@ -74,6 +74,18 @@ export const adminApi = {
   deleteProductImage: (productId, imageId) => data(http.delete(`/products/${productId}/images/${imageId}`)),
   removePrimaryProductImage: (productId) => data(http.delete(`/products/${productId}/primary-image`)),
   categories: (params = {}) => data(http.get('/categories', { params })),
+  allCategories: async () => {
+    const firstPage = await data(http.get('/categories', { params: { page: 1, limit: 100 } }));
+    const remainingPages = await Promise.all(
+      Array.from({ length: Math.max(0, (firstPage.pagination?.totalPages || 1) - 1) }, (_, index) =>
+        data(http.get('/categories', { params: { page: index + 2, limit: 100 } })).then((result) => result.categories || [])
+      ),
+    );
+    return {
+      ...firstPage,
+      categories: [...(firstPage.categories || []), ...remainingPages.flat()],
+    };
+  },
   createCategory: (body) => data(http.post('/categories', body)),
   updateCategory: (id, body) => data(http.patch(`/categories/${id}`, body)),
   updateCategoryStatus: (id, isActive) => data(http.patch(`/categories/${id}/status`, { isActive })),

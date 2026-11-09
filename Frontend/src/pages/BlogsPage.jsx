@@ -6,6 +6,7 @@ import { blogApi } from '../api/blogApi';
 import NewsletterSection from '../components/home/NewsletterSection';
 import { formatDate } from '../utils/format';
 import { useSavedBlogPosts, readingTime } from '../utils/blogExperience';
+import { useSeoMeta } from '../utils/seo';
 import './BlogsPage.css';
 
 function SearchForm({ initialValue, onSearch }) {
@@ -90,11 +91,12 @@ export default function BlogsPage() {
     return () => controller.abort();
   }, [category, page, requestKey, retry, search, sort]);
 
-  useEffect(() => {
-    const previousTitle = document.title;
-    document.title = 'Stories, Guides & Journal | Nishree Attire';
-    return () => { document.title = previousTitle; };
-  }, []);
+  useSeoMeta({
+    title: 'Saree Stories, Guides & Journal | Nishree Attire',
+    description: 'Read the Nishree Attire journal for saree guides, styling ideas, stories of craft and inspiration for special occasions.',
+    path: '/blogs',
+    robots: searchParams.toString() ? 'noindex,follow' : 'index,follow',
+  });
 
   const updateQuery = (changes) => {
     const next = new URLSearchParams(searchParams);
