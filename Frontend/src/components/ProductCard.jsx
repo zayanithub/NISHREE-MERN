@@ -6,6 +6,7 @@ import { useAuth } from '../auth/useAuth';
 import { useCart } from '../cart/useCart';
 import { useWishlist } from '../wishlist/useWishlist';
 import { formatPrice, productImage } from '../utils/format';
+import ResponsiveImage from './ResponsiveImage';
 
 export default function ProductCard({ product, index = 0 }) {
   const [busy, setBusy] = useState(false);
@@ -52,7 +53,7 @@ export default function ProductCard({ product, index = 0 }) {
   return <article className="product-card" style={{ '--card-index': index }}>
     <div className="product-card-image">
       <Link to={`/products/${product.slug}`} aria-label={`View ${product.name}`}>
-        {image ? <img src={image} alt={product.imageAltText || product.name} loading="lazy" decoding="async" width="700" height="850" /> : <div className="image-placeholder" aria-label="Product image unavailable">N</div>}
+        {image ? <ResponsiveImage src={image} alt={product.imageAltText || product.name} loading="lazy" decoding="async" width="700" height="850" sizes="(max-width: 600px) 50vw, (max-width: 1000px) 33vw, 25vw" /> : <div className="image-placeholder" aria-label="Product image unavailable">N</div>}
       </Link>
       <div className="product-badges">
         {isNewArrival && <span className="product-badge is-new-arrival">New arrival</span>}

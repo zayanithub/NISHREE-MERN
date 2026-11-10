@@ -21,6 +21,7 @@ import ProductSection from "../components/ProductSection";
 import CataloguePreviewNotice from "../components/CataloguePreviewNotice";
 import HomeDiscoverySections from "../components/home/HomeDiscoverySections";
 import { ErrorState, LoadingState } from "../components/States";
+import ResponsiveImage from "../components/ResponsiveImage";
 
 
 /* ------------------------------------------
@@ -258,18 +259,26 @@ export default function HomePage() {
       <section className="hero" aria-labelledby="hero-title">
         <div className="hero-image-track" aria-hidden="true" role="presentation">
           <AnimatePresence mode="sync" initial={false}>
-            <motion.img
+            <motion.div
               key={`${activeHeroIndex}-${visibleHeroSlides[activeHeroIndex]?._id || visibleHeroSlides[activeHeroIndex]?.url}`}
-              src={visibleHeroSlides[activeHeroIndex]?.url}
-              alt=""
-              initial={shouldReduceMotion ? false : { opacity: 0, scale: 1.025 }}
+              initial={shouldReduceMotion || activeHeroIndex === 0 ? false : { opacity: 0, scale: 1.025 }}
               animate={{ opacity: 1, scale: 1 }}
               exit={shouldReduceMotion ? { opacity: 0 } : { opacity: 0, scale: 1.015 }}
               transition={shouldReduceMotion ? { duration: 0 } : { duration: 1.05, ease: [0.22, 1, 0.36, 1] }}
-              loading={activeHeroIndex === 0 ? "eager" : "lazy"}
-              fetchPriority={activeHeroIndex === 0 ? "high" : "auto"}
-              decoding="async"
-            />
+              style={{ position: "absolute", inset: 0, width: "100%", height: "100%" }}
+            >
+              <ResponsiveImage
+                src={visibleHeroSlides[activeHeroIndex]?.url}
+                responsiveKey={visibleHeroSlides[activeHeroIndex]?.url}
+                alt=""
+                width="1672"
+                height="941"
+                sizes="100vw"
+                loading={activeHeroIndex === 0 ? "eager" : "lazy"}
+                fetchPriority={activeHeroIndex === 0 ? "high" : "auto"}
+                decoding="async"
+              />
+            </motion.div>
           </AnimatePresence>
         </div>
 
@@ -433,9 +442,10 @@ export default function HomePage() {
                   to={`/collections/${category.slug}`}
                   aria-label={`Explore ${category.name}`}
                 >
-                  <img
+                  <ResponsiveImage
                     src={category.image?.url || categoryImages[index % categoryImages.length]?.url || categoryImages[index % categoryImages.length]}
                     alt={category.image?.url ? "" : categoryImages[index % categoryImages.length]?.altText || ""}
+                    sizes="(max-width: 800px) 45vw, 25vw"
                     loading="lazy"
                     decoding="async"
                     width="720"

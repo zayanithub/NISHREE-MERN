@@ -1,5 +1,5 @@
 import { lazy, Suspense } from 'react';
-import { BrowserRouter, Navigate, Route, Routes, useLocation } from 'react-router-dom';
+import { BrowserRouter, Navigate, Outlet, Route, Routes, useLocation } from 'react-router-dom';
 import { Toaster } from 'sonner';
 import { AuthProvider } from './auth/AuthContext';
 import { CartProvider } from './cart/CartContext';
@@ -8,7 +8,6 @@ import StorefrontLayout from './layouts/StorefrontLayout';
 import AccountLayout from './layouts/AccountLayout';
 import ProtectedRoute from './components/ProtectedRoute';
 import { StoreSettingsProvider } from './settings/StoreSettingsContext';
-import { AdminAuthProvider } from './admin/AdminAuthContext';
 import AdminProtectedRoute from './admin/AdminProtectedRoute';
 import { ThemeProvider } from './theme/ThemeContext';
 import RouteSeo from './components/RouteSeo';
@@ -38,6 +37,7 @@ const ContactPage = lazy(() => import('./pages/BrandPages').then((module) => ({ 
 const FAQPage = lazy(() => import('./pages/BrandPages').then((module) => ({ default: module.FAQPage })));
 const PoliciesPage = lazy(() => import('./pages/BrandPages').then((module) => ({ default: module.PoliciesPage })));
 const AdminLoginPage = lazy(() => import('./admin/AdminLoginPage'));
+const AdminAuthProvider = lazy(() => import('./admin/AdminAuthContext').then((module) => ({ default: module.AdminAuthProvider })));
 const AdminLayout = lazy(() => import('./admin/AdminLayout'));
 const AdminDashboardPage = lazy(() => import('./admin/pages/AdminDashboardPage'));
 const AdminProductsPage = lazy(() => import('./admin/pages/AdminProductsPage'));
@@ -64,6 +64,10 @@ function LegacyHomeRoute() {
     '#atelier': '/atelier',
   }[location.hash];
   return legacyDestination ? <Navigate to={legacyDestination} replace /> : <HomePage />;
+}
+
+function AdminAuthBoundary() {
+  return <AdminAuthProvider><Outlet /></AdminAuthProvider>;
 }
 
 function AppRoutes() {
@@ -106,21 +110,23 @@ function AppRoutes() {
         </Route>
         <Route path="orders/:orderId" element={<ProtectedRoute><OrderDetailPage /></ProtectedRoute>} />
       </Route>
-      <Route path="admin/login" element={<AdminLoginPage />} />
-      <Route path="admin" element={<AdminProtectedRoute><AdminLayout /></AdminProtectedRoute>}>
-        <Route index element={<AdminDashboardPage />} />
-        <Route path="products" element={<AdminProductsPage />} />
-        <Route path="homepage-images" element={<AdminHomepageImagesPage />} />
-        <Route path="blogs" element={<AdminBlogPostsPage />} />
-        <Route path="categories" element={<AdminCategoriesPage />} />
-        <Route path="inventory" element={<AdminInventoryPage />} />
-        <Route path="orders" element={<AdminOrdersPage />} />
-        <Route path="shipping" element={<AdminShippingPage />} />
-        <Route path="customers" element={<AdminCustomersPage />} />
-        <Route path="settings" element={<AdminStoreSettingsPage />} />
-        <Route path="policies" element={<AdminPolicyPage />} />
-        <Route path="coupons" element={<AdminCouponPage />} />
-        <Route path="aftercare" element={<AdminAftercarePage />} />
+      <Route element={<AdminAuthBoundary />}>
+        <Route path="admin/login" element={<AdminLoginPage />} />
+        <Route path="admin" element={<AdminProtectedRoute><AdminLayout /></AdminProtectedRoute>}>
+          <Route index element={<AdminDashboardPage />} />
+          <Route path="products" element={<AdminProductsPage />} />
+          <Route path="homepage-images" element={<AdminHomepageImagesPage />} />
+          <Route path="blogs" element={<AdminBlogPostsPage />} />
+          <Route path="categories" element={<AdminCategoriesPage />} />
+          <Route path="inventory" element={<AdminInventoryPage />} />
+          <Route path="orders" element={<AdminOrdersPage />} />
+          <Route path="shipping" element={<AdminShippingPage />} />
+          <Route path="customers" element={<AdminCustomersPage />} />
+          <Route path="settings" element={<AdminStoreSettingsPage />} />
+          <Route path="policies" element={<AdminPolicyPage />} />
+          <Route path="coupons" element={<AdminCouponPage />} />
+          <Route path="aftercare" element={<AdminAftercarePage />} />
+        </Route>
       </Route>
       <Route element={<StorefrontLayout />}><Route path="*" element={<NotFoundPage />} /></Route>
     </Routes></Suspense>
@@ -129,5 +135,5 @@ function AppRoutes() {
 }
 
 export default function App() {
-  return <ThemeProvider><AdminAuthProvider><StoreSettingsProvider><AuthProvider><CartProvider><WishlistProvider><BrowserRouter><AppRoutes /></BrowserRouter></WishlistProvider></CartProvider></AuthProvider></StoreSettingsProvider></AdminAuthProvider></ThemeProvider>;
+  return <ThemeProvider><StoreSettingsProvider><AuthProvider><CartProvider><WishlistProvider><BrowserRouter><AppRoutes /></BrowserRouter></WishlistProvider></CartProvider></AuthProvider></StoreSettingsProvider></ThemeProvider>;
 }

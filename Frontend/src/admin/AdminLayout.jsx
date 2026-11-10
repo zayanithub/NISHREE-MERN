@@ -3,9 +3,10 @@ import { NavLink, Outlet, useLocation, useNavigate } from 'react-router-dom';
 import { Boxes, ChevronLeft, ChevronRight, ClipboardList, Images, LayoutDashboard, LogOut, Menu, Package, RefreshCcw, ScrollText, Search, Settings2, Tags, TicketPercent, Truck, UsersRound, X, BookOpenText } from 'lucide-react';
 import { motion, useReducedMotion } from 'framer-motion';
 import { useAdminAuth } from './useAdminAuth';
-import companyLogo from '../assets/Nishree Attaire Company Logo HD_640x640.png';
+import companyLogo from '../assets/Nishree Attaire Company Logo HD_640x640.webp';
 import { ThemeToggle } from '../theme/ThemeContext';
 import BackNavigation from '../components/BackNavigation';
+import './AdminWorkspace.css';
 import './AdminPremium.css';
 
 const navigationGroups = [

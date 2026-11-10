@@ -12,3 +12,4 @@ Disallow: /orders
 Disallow: /wishlist
 
 Sitemap: https://www.nishree.in/sitemap.xml
+Agentmap: https://www.nishree.in/.well-known/ai-catalog.json

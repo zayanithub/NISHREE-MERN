@@ -5,16 +5,16 @@ import sareeImagess from '../assets/saree imagess.jpg';
 import sareeImagesss from '../assets/saree imagesss.jpg';
 import sareeShop from '../assets/saree shop image.jpg';
 import showroom from '../assets/saree showromm images.jpg';
-import showroomWide from '../assets/saree showroom images.png';
+import showroomWide from '../assets/saree showroom images.webp';
 import designGirlOne from '../assets/saree design girl 1.jpg';
 import designGirlTwo from '../assets/saree design girl 2.jpg';
 import designGirlThree from '../assets/saree design girl 3.jpg';
 import designGirlFour from '../assets/saree design girl 4.jpg';
 import designGirlFive from '../assets/saree design girl 5.webp';
 import designGirlSix from '../assets/saree design girl 6.webp';
-import royalBlue from '../assets/Royal Blue and Ivory Palace Wedding Editorial.png';
-import regalBlush from '../assets/Regal Blush Saree in a Floral Arch.png';
-import maroonShowroom from '../assets/Maroon Saree in a Festive Bridal Showroom.png';
+import royalBlue from '../assets/Royal Blue and Ivory Palace Wedding Editorial.webp';
+import regalBlush from '../assets/Regal Blush Saree in a Floral Arch.webp';
+import maroonShowroom from '../assets/Maroon Saree in a Festive Bridal Showroom.webp';
 
 const banners = [
   sareeShop, sareeImagesss, sareeGirl, showroom, royalBlue, sareeImages,

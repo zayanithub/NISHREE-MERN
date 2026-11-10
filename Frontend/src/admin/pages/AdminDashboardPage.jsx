@@ -13,7 +13,7 @@ import {
 import { Link } from 'react-router-dom';
 import { adminApi } from '../adminApi';
 import { formatPrice } from '../../utils/format';
-import dashboardHeroImage from '../../assets/Regal Blush Saree in a Floral Arch.png';
+import dashboardHeroImage from '../../assets/Regal Blush Saree in a Floral Arch.webp';
 import './AdminDashboard.css';
 
 const metricCards = [

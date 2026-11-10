@@ -3,6 +3,7 @@ import { ArrowRight } from 'lucide-react';
 import { Link } from 'react-router-dom';
 import { homepageApi } from '../api/homepageApi';
 import { Reveal } from '../components/Reveal';
+import ResponsiveImage from '../components/ResponsiveImage';
 import './AtelierPage.css';
 
 const fallbackImage = {
@@ -35,13 +36,16 @@ export default function AtelierPage() {
       <section className="atelier-section">
         <div className="atelier-visual">
           <div className="atelier-photo-frame">
-            <img
+            <ResponsiveImage
               src={image.url || fallbackImage.url}
+              responsiveKey={image.url || fallbackImage.url}
               alt={image.altText || fallbackImage.altText}
               loading="eager"
+              fetchPriority="high"
               decoding="async"
-              width="1024"
-              height="1024"
+              width="1672"
+              height="941"
+              sizes="(max-width: 800px) 100vw, 50vw"
               onError={(event) => {
                 event.currentTarget.onerror = null;
                 event.currentTarget.src = fallbackImage.url;

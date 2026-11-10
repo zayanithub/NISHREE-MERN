@@ -4,6 +4,7 @@ import { motion, useReducedMotion } from 'framer-motion';
 import { Link } from 'react-router-dom';
 import { catalogApi } from '../api/catalogApi';
 import { formatPrice } from '../utils/format';
+import ResponsiveImage from '../components/ResponsiveImage';
 import '../components/home/HomeDiscoverySections.css';
 import './FindYourDrapePage.css';
 
@@ -125,7 +126,7 @@ export default function FindYourDrapePage() {
           animate={{ opacity: 1, scale: 1, x: 0 }}
           transition={{ duration: .85, delay: .12, ease: [0.22, 1, 0.36, 1] }}
         >
-          <img src="/homepage-images/drape-detail.jpg" alt="A close detail of a saree's intricate woven border" fetchPriority="high" />
+          <ResponsiveImage src="/homepage-images/drape-detail.jpg" alt="A close detail of a saree's intricate woven border" width="1856" height="2304" sizes="(max-width: 800px) 100vw, 45vw" fetchPriority="high" />
           <span className="find-drape-art-label"><i aria-hidden="true" /> THE NISHREE EDIT <b>·</b> 01</span>
           <span className="find-drape-art-caption">Every thread,<br /><em>chosen with feeling.</em></span>
         </motion.div>

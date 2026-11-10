@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useRef, useState } from 'react';
+import { lazy, Suspense, useCallback, useEffect, useRef, useState } from 'react';
 import {
   ArrowRight,
   Heart,
@@ -10,16 +10,37 @@ import {
   X,
 } from 'lucide-react';
 import { Link, NavLink, useLocation, useNavigate } from 'react-router-dom';
-import { useReducedMotion } from 'framer-motion';
-
 import { useAuth } from '../auth/useAuth';
 import { useCart } from '../cart/useCart';
 import { catalogApi } from '../api/catalogApi';
 import companyLogo from '../assets/Nishree Attire Navbar Logo.png';
+import ResponsiveImage from './ResponsiveImage';
 import { ThemeToggle } from '../theme/ThemeContext';
 import { formatDate, formatPrice } from '../utils/format';
 import { currentCouponOffers } from '../utils/couponOffers';
-import SecondaryCategoryNavigation from './SecondaryCategoryNavigation';
+const SecondaryCategoryNavigation = lazy(() => import('./SecondaryCategoryNavigation'));
+
+function usePrefersReducedMotion() {
+  const [shouldReduceMotion, setShouldReduceMotion] = useState(() => (
+    typeof window !== 'undefined'
+    && typeof window.matchMedia === 'function'
+    && window.matchMedia('(prefers-reduced-motion: reduce)').matches
+  ));
+
+  useEffect(() => {
+    if (typeof window.matchMedia !== 'function') return undefined;
+    const preference = window.matchMedia('(prefers-reduced-motion: reduce)');
+    const updatePreference = (event) => setShouldReduceMotion(event.matches);
+    if (preference.addEventListener) {
+      preference.addEventListener('change', updatePreference);
+      return () => preference.removeEventListener('change', updatePreference);
+    }
+    preference.addListener(updatePreference);
+    return () => preference.removeListener(updatePreference);
+  }, []);
+
+  return shouldReduceMotion;
+}
 
 /* ----------------------------------
    Announcement Bar
@@ -35,7 +56,7 @@ function AnnouncementBar() {
   const [isHovered, setIsHovered] = useState(false);
   const [hasFocus, setHasFocus] = useState(false);
 
-  const shouldReduceMotion = useReducedMotion();
+  const shouldReduceMotion = usePrefersReducedMotion();
 
   /*
    * Refresh offers periodically.
@@ -510,11 +531,14 @@ export default function SiteHeader() {
           className="brand-mark"
           aria-label="Nishree Attire home"
         >
-          <img
+          <ResponsiveImage
             src={companyLogo}
+            responsiveKey="/assets/Nishree Attire Navbar Logo.png"
+            pictureClassName="brand-mark-image"
             alt="Nishree Attire"
             width="1200"
             height="967"
+            sizes="(max-width: 360px) 44px, (max-width: 600px) 61px, (max-width: 800px) 71px, 84px"
             decoding="async"
           />
         </Link>
@@ -605,7 +629,7 @@ export default function SiteHeader() {
         </div>
       </div>
 
-      {showSecondaryCategories && <SecondaryCategoryNavigation showCatalogLinks={isCatalogRoute} />}
+      {showSecondaryCategories && <Suspense fallback={null}><SecondaryCategoryNavigation showCatalogLinks={isCatalogRoute} /></Suspense>}
 
       {/* Expandable search panel */}
       {searchOpen && (

@@ -1,0 +1,21 @@
+# Nishree Attire
+
+> Nishree Attire is an online saree store featuring silk, cotton, and designer sarees for celebrations and everyday wear.
+
+## Store
+
+- [Shop sarees](https://www.nishree.in/shop): Browse the saree collection.
+- [New arrivals](https://www.nishree.in/new-arrivals): See recently added styles.
+- [Saree collections](https://www.nishree.in/product_hub): Browse collections by style and category.
+- [Find your drape](https://www.nishree.in/find-your-drape): Explore the saree selection guide.
+
+## About and support
+
+- [About Nishree Attire](https://www.nishree.in/about): Learn about the store.
+- [Contact customer care](https://www.nishree.in/contact): Get help with products and orders.
+- [Frequently asked questions](https://www.nishree.in/faq): Read answers to common questions.
+- [Store policies](https://www.nishree.in/policies): Review shopping and service policies.
+
+## Optional
+
+- [Sitemap](https://www.nishree.in/sitemap.xml): Discover public pages and products.

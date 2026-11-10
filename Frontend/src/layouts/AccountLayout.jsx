@@ -6,7 +6,7 @@ import { accountNavigation } from '../account/accountNavigation';
 import { useEffect, useState } from 'react';
 import { customerApi } from '../api/customerApi';
 import { normalizeApiError } from '../api/client';
-import companyLogo from '../assets/Nishree Attire Navbar Logo.png';
+import companyLogo from '../assets/Nishree Attire Navbar Logo.webp';
 import './AccountSections.css';
 
 export default function AccountLayout() {

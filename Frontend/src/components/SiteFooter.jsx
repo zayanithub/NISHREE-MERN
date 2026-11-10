@@ -2,6 +2,7 @@ import { ArrowUpRight, Mail, MapPin, Phone, Sparkles } from 'lucide-react';
 import { Link } from 'react-router-dom';
 import logo from '../assets/Nishree Attire Navbar Logo.png';
 import { useStoreSettings } from '../settings/useStoreSettings';
+import ResponsiveImage from './ResponsiveImage';
 import SocialLinks from './SocialLinks';
 
 const exploreLinks = [
@@ -91,7 +92,7 @@ export default function SiteFooter() {
               aria-label="Nishree Attire home"
             >
               <span className="relative grid h-[4.25rem] w-[4.25rem] shrink-0 place-items-center overflow-hidden rounded-2xl border border-[#e8c697]/40 bg-transparent p-1 shadow-[0_8px_24px_rgba(0,0,0,0.25)] transition duration-300 group-hover:-translate-y-0.5 group-hover:rotate-2 group-hover:border-[#f5c6ad]/80 motion-reduce:transition-none">
-                <img className="footer-brand-mark h-full w-full object-contain" src={logo} alt="" loading="lazy" width="1200" height="967" />
+                <ResponsiveImage pictureClassName="block h-full w-full" className="footer-brand-mark h-full w-full object-contain" src={logo} responsiveKey="/assets/Nishree Attire Navbar Logo.png" alt="" loading="lazy" decoding="async" width="84" height="68" sizes="68px" />
               </span>
               <span>
                 <span className="block font-serif text-xl tracking-wide text-[#fff0dd]">Nishree Attire</span>

@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from 'react';
+import { lazy, Suspense, useEffect, useMemo, useRef, useState } from 'react';
 import { ArrowRight, ArrowUpRight, Camera, Star } from 'lucide-react';
 import { Link } from 'react-router-dom';
 import { catalogApi } from '../../api/catalogApi';
@@ -6,13 +6,41 @@ import { productImage } from '../../utils/format';
 import { readRecentlyViewedSlugs } from '../../utils/recentlyViewed';
 import { useStoreSettings } from '../../settings/useStoreSettings';
 import HomeProductCarousel from './HomeProductCarousel';
-import NewsletterSection from './NewsletterSection';
+import ResponsiveImage from '../ResponsiveImage';
 import './HomeDiscoverySections.css';
+
+const NewsletterSection = lazy(() => import('./NewsletterSection'));
 
 const cancelled = (error, signal) => signal?.aborted
   || error?.name === 'CanceledError'
   || error?.name === 'AbortError'
   || error?.code === 'ERR_CANCELED';
+
+function DeferredNewsletterSection() {
+  const sectionRef = useRef(null);
+  const [shouldLoad, setShouldLoad] = useState(() => typeof IntersectionObserver === 'undefined');
+
+  useEffect(() => {
+    const section = sectionRef.current;
+    if (!section) return undefined;
+    if (!('IntersectionObserver' in window)) return undefined;
+
+    const observer = new IntersectionObserver(([entry]) => {
+      if (entry.isIntersecting) {
+        setShouldLoad(true);
+        observer.disconnect();
+      }
+    }, { rootMargin: '800px 0px' });
+    observer.observe(section);
+    return () => observer.disconnect();
+  }, []);
+
+  return (
+    <div className="home-newsletter-slot" ref={sectionRef}>
+      {shouldLoad && <Suspense fallback={null}><NewsletterSection /></Suspense>}
+    </div>
+  );
+}
 
 function HomeSectionHeading({ kicker, title, description, link, linkText = 'Explore all' }) {
   return (
@@ -152,7 +180,7 @@ export default function HomeDiscoverySections({ featured = [], socialImages = []
           <div className="home-trending-grid">
             {trendingCollections.map((product) => (
               <Link className="home-trending-card" to={`/collections/${product.category.slug}`} key={product.category.slug}>
-                <img src={productImage(product)} alt={product.imageAltText || product.category.name} loading="lazy" decoding="async" />
+                <ResponsiveImage src={productImage(product)} alt={product.imageAltText || product.category.name} loading="lazy" decoding="async" width="700" height="850" sizes="(max-width: 700px) 85vw, 35vw" />
                 <span className="home-trending-overlay" aria-hidden="true" />
                 <span className="home-trending-copy"><small>THE NISHREE EDIT</small><strong>{product.category.name}</strong></span>
                 <span className="home-trending-arrow" aria-hidden="true"><ArrowUpRight size={17} /></span>
@@ -216,7 +244,7 @@ export default function HomeDiscoverySections({ featured = [], socialImages = []
           <div className="home-social-grid">
             {socialImages.slice(0, 6).map((image) => (
               <a href={settings.instagramUrl || '/shop'} target={settings.instagramUrl ? '_blank' : undefined} rel={settings.instagramUrl ? 'noreferrer' : undefined} key={image._id || image.url} aria-label={settings.instagramUrl ? `See ${image.title || 'Nishree Attire on Instagram'}` : image.title || 'Nishree Attire editorial image'}>
-                <img src={image.url} alt={image.altText || image.title || ''} loading="lazy" decoding="async" />
+                <ResponsiveImage src={image.url} alt={image.altText || image.title || ''} loading="lazy" decoding="async" sizes="(max-width: 600px) 40vw, 16vw" />
                 <span><Camera size={17} aria-hidden="true" /></span>
               </a>
             ))}
@@ -224,7 +252,7 @@ export default function HomeDiscoverySections({ featured = [], socialImages = []
         </section>
       )}
 
-      <NewsletterSection />
+      <DeferredNewsletterSection />
     </>
   );
 }

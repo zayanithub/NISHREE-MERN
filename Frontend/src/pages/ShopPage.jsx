@@ -8,7 +8,7 @@ import { Reveal } from '../components/Reveal';
 import CollectionPage from '../components/CollectionPage';
 import ShopLanding from '../components/ShopLanding';
 import { collectionBySlug } from '../data/collectionCatalog';
-import festiveCollectionImage from '../assets/Royal Diwali Saree by the Palace.png';
+import festiveCollectionImage from '../assets/Royal Diwali Saree by the Palace.webp';
 import { useSeoMeta } from '../utils/seo';
 
 const sortValues = ['newest', 'oldest', 'featured', 'name-asc', 'name-desc', 'price-asc', 'price-desc'];

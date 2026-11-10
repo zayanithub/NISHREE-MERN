@@ -28,9 +28,9 @@ import { useAuth } from '../auth/useAuth';
 import { ErrorState } from '../components/States';
 import { useWishlist } from '../wishlist/useWishlist';
 import { formatDate, formatPrice } from '../utils/format';
-import accountHeroImage from '../assets/Regal Blush Saree in a Floral Arch.png';
-import accountCampaignImage from '../assets/Opulent Indian Bridal Portrait.png';
-import companyLogo from '../assets/Nishree Attire Navbar Logo.png';
+import accountHeroImage from '../assets/Regal Blush Saree in a Floral Arch.webp';
+import accountCampaignImage from '../assets/Opulent Indian Bridal Portrait.webp';
+import companyLogo from '../assets/Nishree Attire Navbar Logo.webp';
 import './AccountPage.css';
 
 const readable = (value = '') => value.replaceAll('_', ' ');

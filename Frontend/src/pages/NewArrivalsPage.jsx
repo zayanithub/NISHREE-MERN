@@ -3,6 +3,7 @@ import { ArrowRight, ArrowUpRight } from 'lucide-react';
 import { Link } from 'react-router-dom';
 import { catalogApi } from '../api/catalogApi';
 import { homepageApi } from '../api/homepageApi';
+import ResponsiveImage from '../components/ResponsiveImage';
 import HomeProductCarousel from '../components/home/HomeProductCarousel';
 import { ErrorState, LoadingState } from '../components/States';
 import { Reveal } from '../components/Reveal';
@@ -64,13 +65,15 @@ export default function NewArrivalsPage() {
       <h1 className="sr-only">New arrivals</h1>
       <section className="new-arrivals-editorial">
         <Reveal className="new-arrivals-image">
-          <img
+          <ResponsiveImage
             src={editorial.url || fallbackEditorial.url}
+            responsiveKey={editorial.url || fallbackEditorial.url}
             alt={editorial.altText || fallbackEditorial.altText}
             loading="eager"
             decoding="async"
             width="900"
             height="900"
+            sizes="(max-width: 800px) 90vw, 45vw"
             onError={(event) => {
               event.currentTarget.onerror = null;
               event.currentTarget.src = fallbackEditorial.url;
@@ -101,13 +104,15 @@ export default function NewArrivalsPage() {
             <div className="new-arrival-list">
               {products.slice(0, 2).map((product) => (
                 <Link to={`/products/${product.slug}`} key={product._id ?? product.slug} className="new-arrival-item">
-                  <img
+                  <ResponsiveImage
                     src={product.primaryImage?.url || fallbackEditorial.url}
+                    responsiveKey={product.primaryImage?.url || fallbackEditorial.url}
                     alt={product.primaryImage?.url ? '' : fallbackEditorial.altText}
                     loading="lazy"
                     decoding="async"
                     width="96"
                     height="112"
+                    sizes="96px"
                     onError={(event) => {
                       event.currentTarget.onerror = null;
                       event.currentTarget.src = fallbackEditorial.url;

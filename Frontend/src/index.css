@@ -1,7 +1,11 @@
 @import "tailwindcss";
+@import "@fontsource-variable/dm-sans/wght.css";
+@import "@fontsource-variable/lora/wght.css";
 
 :root {
-  font-family: "DM Sans", "Avenir Next", Avenir, "Segoe UI", sans-serif;
+  font-family: "DM Sans Variable", "Avenir Next", Avenir, "Segoe UI", sans-serif;
+  --sans: "DM Sans Variable", "Avenir Next", Avenir, "Segoe UI", sans-serif;
+  --serif: "Lora Variable", Georgia, serif;
   color: #302623;
   background: #faf8f3;
   font-synthesis: none;

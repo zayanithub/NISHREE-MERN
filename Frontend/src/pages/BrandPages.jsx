@@ -24,7 +24,7 @@ import {
 import { useStoreSettings } from '../settings/useStoreSettings';
 import SocialLinks from '../components/SocialLinks';
 import contactImage from '../assets/saree shop image.jpg';
-import aboutShowroom from '../assets/saree showroom images.png';
+import aboutShowroom from '../assets/saree showroom images.webp';
 import aboutPortrait from '../assets/saree girl image.jpg';
 import { contactApi } from '../api/contactApi';
 import { normalizeApiError } from '../api/client';

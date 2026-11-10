@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { ChevronLeft, ChevronRight, X, ZoomIn } from 'lucide-react';
+import ResponsiveImage from './ResponsiveImage';
 import './ProductGallery.css';
 
 export default function ProductGallery({ images = [], activeImage, onSelectImage, productName, imageAltText, imageCredit, imageSourceUrl }) {
@@ -83,7 +84,7 @@ export default function ProductGallery({ images = [], activeImage, onSelectImage
   const renderImage = (className = '', isPreview = false) => unavailable ? (
     <div className="product-gallery-unavailable"><span>N</span><small>Product image unavailable</small></div>
   ) : (
-    <img
+    <ResponsiveImage
       className={`${className}${imageLoaded ? ' is-loaded' : ''}`}
       src={currentUrl}
       alt={currentAlt}
@@ -92,6 +93,7 @@ export default function ProductGallery({ images = [], activeImage, onSelectImage
       decoding="async"
       loading={isPreview ? 'lazy' : 'eager'}
       fetchPriority={isPreview ? 'low' : 'high'}
+      sizes={isPreview ? '(max-width: 800px) 100vw, 50vw' : '(max-width: 800px) 100vw, 50vw'}
       onLoad={() => setLoadedImageUrl(currentUrl)}
       onError={() => setFailedImages((current) => new Set(current).add(currentUrl))}
     />
@@ -138,7 +140,7 @@ export default function ProductGallery({ images = [], activeImage, onSelectImage
       >
         {failedImages.has(image.url)
           ? <span className="product-gallery-thumb-fallback">N</span>
-          : <img src={image.url} alt="" width="110" height="135" loading={image.isPrimary ? 'eager' : 'lazy'} decoding="async" onError={() => setFailedImages((current) => new Set(current).add(image.url))} />}
+          : <ResponsiveImage src={image.url} alt="" width="110" height="135" loading={image.isPrimary ? 'eager' : 'lazy'} decoding="async" sizes="110px" onError={() => setFailedImages((current) => new Set(current).add(image.url))} />}
       </button>)}
     </div>}
     {imageCredit && <p className="product-gallery-credit">Image credit: {imageSourceUrl ? <a href={imageSourceUrl} target="_blank" rel="noopener noreferrer">{imageCredit}</a> : imageCredit}</p>}

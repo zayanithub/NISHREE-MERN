@@ -15,9 +15,10 @@ import {
 } from 'lucide-react';
 import { normalizeApiError } from '../api/client';
 import { useAdminAuth } from './useAdminAuth';
-import companyLogo from '../assets/Nishree Attaire Company Logo HD_640x640.png';
+import companyLogo from '../assets/Nishree Attaire Company Logo HD_640x640.webp';
 import authImage from '../assets/saree shop image.jpg';
 import { ThemeToggle } from '../theme/ThemeContext';
+import './AdminWorkspace.css';
 import './AdminLoginPage.css';
 
 const REMEMBERED_ADMIN_EMAIL_KEY = 'nishree-admin-remembered-email';

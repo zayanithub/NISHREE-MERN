@@ -1,11 +1,30 @@
 import { Outlet, useLocation } from 'react-router-dom';
-import { lazy, Suspense, useEffect, useState } from 'react';
+import { Bot } from 'lucide-react';
+import { lazy, Suspense, useCallback, useEffect, useRef, useState } from 'react';
 import SiteHeader from '../components/SiteHeader';
 import SiteFooter from '../components/SiteFooter';
 import CartDrawer from '../components/CartDrawer';
-import ShoppingAssistant from '../components/ShoppingAssistant';
 import BackNavigation from '../components/BackNavigation';
 const SignatureReveal = lazy(() => import('../components/SignatureReveal'));
+const ShoppingAssistant = lazy(() => import('../components/ShoppingAssistant'));
+
+function ShoppingAssistantHost() {
+  const [assistantLoaded, setAssistantLoaded] = useState(false);
+  const [assistantOpen, setAssistantOpen] = useState(false);
+  const assistantLauncherRef = useRef(null);
+  const assistantWasOpenRef = useRef(false);
+  const closeShoppingAssistant = useCallback(() => setAssistantOpen(false), []);
+
+  useEffect(() => {
+    if (!assistantOpen && assistantWasOpenRef.current) assistantLauncherRef.current?.focus();
+    assistantWasOpenRef.current = assistantOpen;
+  }, [assistantOpen]);
+
+  return <div className="shopping-assistant">
+    {!assistantOpen && <button ref={assistantLauncherRef} className="assistant-launcher" type="button" aria-label="Open shopping assistant" aria-expanded={false} aria-controls="nishree-assistant-panel" onClick={() => { setAssistantLoaded(true); setAssistantOpen(true); }}><Bot size={22} /><span>Ask Nishree</span></button>}
+    {assistantLoaded && <Suspense fallback={null}><ShoppingAssistant open={assistantOpen} onClose={closeShoppingAssistant} /></Suspense>}
+  </div>;
+}
 
 export default function StorefrontLayout() {
   const location = useLocation();
@@ -14,7 +33,6 @@ export default function StorefrontLayout() {
   const initialHome = initialPath === '/' || initialPath === '/home';
   const isAuthPage = ['/login', '/register', '/forgot-password'].includes(location.pathname);
   const isJournalRoute = location.pathname === '/blogs' || location.pathname.startsWith('/blogs/');
-  const showShoppingAssistant = !isAuthPage;
 
   useEffect(() => {
     if (location.hash) {
@@ -31,7 +49,7 @@ export default function StorefrontLayout() {
     <main id="main-content" className="storefront-main">{!isAuthPage && !isJournalRoute && <BackNavigation />}<Outlet /></main>
     <SiteFooter />
     <CartDrawer />
-    {showShoppingAssistant && <ShoppingAssistant />}
+    {!isAuthPage && <ShoppingAssistantHost />}
     {initialHome && !revealDone && <Suspense fallback={null}><SignatureReveal onComplete={() => setRevealDone(true)} /></Suspense>}
   </>;
 }
