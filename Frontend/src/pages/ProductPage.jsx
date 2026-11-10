@@ -18,7 +18,7 @@ import { formatDate, formatPrice, productImage } from '../utils/format';
 import { currentCouponOffers } from '../utils/couponOffers';
 import { useStoreSettings } from '../settings/useStoreSettings';
 import { recordRecentlyViewedProduct } from '../utils/recentlyViewed';
-import { SITE_ORIGIN, useSeoMeta } from '../utils/seo';
+import { absoluteSiteUrl, SITE_ORIGIN, useSeoMeta } from '../utils/seo';
 import './ProductPage.css';
 
 const reviewSchema = z.object({
@@ -194,7 +194,13 @@ export default function ProductPage() {
   const listPrice = Number(product?.basePrice || 0) + Number(selectedVariant?.priceAdjustment || 0);
   const savings = listPrice > currentPrice ? listPrice - currentPrice : 0;
   const savingsPercent = savings ? Math.round(savings / listPrice * 100) : 0;
-  const availableQuantity = Number(selectedVariant?.availableQuantity ?? product?.availableQuantity ?? 0);
+  const rawAvailableQuantity = selectedVariant?.availableQuantity ?? product?.availableQuantity;
+  const availableQuantity = Number(rawAvailableQuantity ?? 0);
+  const hasKnownAvailability = rawAvailableQuantity !== undefined
+    && rawAvailableQuantity !== null
+    && String(rawAvailableQuantity).trim() !== ''
+    && Number.isFinite(Number(rawAvailableQuantity))
+    && Number(rawAvailableQuantity) >= 0;
   const isCataloguePreview = product?.tags?.includes('catalogue-preview');
   const isSaved = product ? has(product._id) : false;
   const productDescription = product
@@ -202,39 +208,73 @@ export default function ProductPage() {
     : 'Explore saree details, fabric and availability at Nishree Attire.';
   const productStructuredData = useMemo(() => {
     if (!product) return undefined;
-    return {
-      '@context': 'https://schema.org',
+    const price = Number(product.salePrice ?? product.basePrice);
+    const currency = String(product.currency || 'INR').toUpperCase();
+    const imageUrls = images.map((image) => absoluteSiteUrl(image.url)).filter(Boolean);
+    const productData = {
       '@type': 'Product',
       name: product.name,
-      description: productDescription,
-      sku: product.sku,
-      image: images.map((image) => image.url),
-      category: product.category?.name,
+      ...(productDescription ? { description: productDescription } : {}),
+      ...(product.sku ? { sku: product.sku } : {}),
+      ...(imageUrls.length ? { image: imageUrls } : {}),
+      ...(product.category?.name ? { category: product.category.name } : {}),
       material: product.material || undefined,
       color: product.color || undefined,
       brand: {
         '@type': 'Brand',
         name: product.brand || 'Nishree Attire',
       },
-      offers: {
-        '@type': 'Offer',
-        url: `${SITE_ORIGIN}/products/${encodeURIComponent(product.slug)}`,
-        priceCurrency: product.currency || 'INR',
-        price: Number(product.salePrice ?? product.basePrice ?? 0),
-        availability: availableQuantity > 0
-          ? 'https://schema.org/InStock'
-          : 'https://schema.org/OutOfStock',
-        itemCondition: 'https://schema.org/NewCondition',
-      },
-      ...(reviewSummary?.reviewCount > 0 ? {
-        aggregateRating: {
-          '@type': 'AggregateRating',
-          ratingValue: Number(reviewSummary.averageRating),
-          reviewCount: Number(reviewSummary.reviewCount),
+      ...(Number.isFinite(price) && price >= 0 && /^[A-Z]{3}$/.test(currency) ? {
+        offers: {
+          '@type': 'Offer',
+          url: `${SITE_ORIGIN}/products/${encodeURIComponent(product.slug)}`,
+          priceCurrency: currency,
+          price,
+          ...(hasKnownAvailability ? {
+            availability: availableQuantity > 0
+              ? 'https://schema.org/InStock'
+              : 'https://schema.org/OutOfStock',
+          } : {}),
+          itemCondition: 'https://schema.org/NewCondition',
         },
       } : {}),
     };
-  }, [availableQuantity, images, product, productDescription, reviewSummary]);
+    const ratingValue = Number(reviewSummary?.averageRating);
+    const reviewCount = Number(reviewSummary?.reviewCount);
+    if (Number.isFinite(ratingValue) && ratingValue >= 1 && ratingValue <= 5 && Number.isInteger(reviewCount) && reviewCount > 0) {
+      productData.aggregateRating = {
+        '@type': 'AggregateRating',
+        ratingValue,
+        reviewCount,
+      };
+    }
+
+    const breadcrumbItems = [
+      { name: 'Home', item: `${SITE_ORIGIN}/` },
+      { name: 'Shop', item: `${SITE_ORIGIN}/shop` },
+      ...(product.category?.name && product.category?.slug ? [{
+        name: product.category.name,
+        item: `${SITE_ORIGIN}/collections/${encodeURIComponent(product.category.slug)}`,
+      }] : []),
+      { name: product.name, item: `${SITE_ORIGIN}/products/${encodeURIComponent(product.slug)}` },
+    ];
+
+    return {
+      '@context': 'https://schema.org',
+      '@graph': [
+        productData,
+        {
+          '@type': 'BreadcrumbList',
+          itemListElement: breadcrumbItems.map((item, index) => ({
+            '@type': 'ListItem',
+            position: index + 1,
+            name: item.name,
+            item: item.item,
+          })),
+        },
+      ],
+    };
+  }, [availableQuantity, hasKnownAvailability, images, product, productDescription, reviewSummary]);
 
   useSeoMeta({
     title: product

@@ -12,7 +12,7 @@ function homepageHeroPreload() {
 
   const srcset = heroVariants.map(({ src, width }) => `${src} ${width}w`).join(', ')
   const fallback = heroVariants.find(({ width }) => width >= 768) || heroVariants.at(-1)
-  const preloadScript = `<script>(()=>{if(location.pathname!=='/'&&location.pathname!=='/home')return;const l=document.createElement('link');l.rel='preload';l.as='image';l.type='image/avif';l.href='${fallback.src}';l.setAttribute('imagesrcset','${srcset}');l.setAttribute('imagesizes','100vw');l.fetchPriority='high';document.head.append(l)})()</script>`
+  const preloadScript = `<script>(()=>{if(location.pathname!=='/'&&location.pathname!=='/home')return;const l=document.createElement('link');l.rel='preload';l.as='image';l.type='image/avif';l.href='${fallback.src}';l.setAttribute('imagesrcset','${srcset}');l.setAttribute('imagesizes','(max-width: 600px) 200vw, 100vw');l.fetchPriority='high';document.head.append(l)})()</script>`
 
   return {
     name: 'homepage-hero-preload',

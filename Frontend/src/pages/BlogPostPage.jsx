@@ -5,7 +5,7 @@ import { Link, useParams } from 'react-router-dom';
 import { blogApi } from '../api/blogApi';
 import { useSavedBlogPosts, readingTime, shareBlogPost } from '../utils/blogExperience';
 import { formatDate } from '../utils/format';
-import { SITE_ORIGIN, useSeoMeta } from '../utils/seo';
+import { absoluteSiteUrl, SITE_ORIGIN, useSeoMeta } from '../utils/seo';
 import './BlogPostPage.css';
 
 function ContentBlock({ block, index, imageAlt }) {
@@ -32,6 +32,51 @@ export default function BlogPostPage() {
   const requestKey = `${slug}:${retry}`;
   const isLoading = loadedKey !== requestKey;
   const post = result?.post;
+  const structuredData = post ? (() => {
+    const articleUrl = `${SITE_ORIGIN}/blogs/${encodeURIComponent(post.slug)}`;
+    const imageUrl = absoluteSiteUrl(post.heroImage);
+    const publishedAt = post.publishAt && Number.isFinite(Date.parse(post.publishAt))
+      ? new Date(post.publishAt).toISOString()
+      : undefined;
+    const modifiedAt = post.updatedAt && Number.isFinite(Date.parse(post.updatedAt))
+      ? new Date(post.updatedAt).toISOString()
+      : publishedAt;
+    const author = post.author
+      ? { '@type': 'Person', name: post.author }
+      : { '@type': 'Organization', name: 'Nishree Attire' };
+
+    return {
+      '@context': 'https://schema.org',
+      '@graph': [
+        {
+          '@type': 'Article',
+          headline: post.title,
+          ...(post.excerpt ? { description: post.excerpt } : {}),
+          ...(imageUrl ? { image: [imageUrl] } : {}),
+          ...(publishedAt ? { datePublished: publishedAt } : {}),
+          ...(modifiedAt ? { dateModified: modifiedAt } : {}),
+          author,
+          publisher: {
+            '@type': 'Organization',
+            name: 'Nishree Attire',
+            logo: {
+              '@type': 'ImageObject',
+              url: `${SITE_ORIGIN}/favicon.svg`,
+            },
+          },
+          mainEntityOfPage: articleUrl,
+        },
+        {
+          '@type': 'BreadcrumbList',
+          itemListElement: [
+            { '@type': 'ListItem', position: 1, name: 'Home', item: `${SITE_ORIGIN}/` },
+            { '@type': 'ListItem', position: 2, name: 'Journal', item: `${SITE_ORIGIN}/blogs` },
+            { '@type': 'ListItem', position: 3, name: post.title, item: articleUrl },
+          ],
+        },
+      ],
+    };
+  })() : undefined;
 
   useSeoMeta({
     title: post ? `${post.title} | Nishree Attire Journal` : 'Nishree Attire Journal',
@@ -40,32 +85,7 @@ export default function BlogPostPage() {
     image: post?.heroImage || '/homepage-images/saree-flatlay.jpg',
     type: 'article',
     robots: post ? 'index,follow' : 'noindex,follow',
-    structuredData: post ? {
-      '@context': 'https://schema.org',
-      '@type': 'Article',
-      headline: post.title,
-      description: post.excerpt,
-      image: post.heroImage ? [post.heroImage] : undefined,
-      datePublished: post.publishAt ? new Date(post.publishAt).toISOString() : undefined,
-      dateModified: post.updatedAt
-        ? new Date(post.updatedAt).toISOString()
-        : post.publishAt
-          ? new Date(post.publishAt).toISOString()
-          : undefined,
-      author: {
-        '@type': 'Person',
-        name: post.author || 'Nishree Attire',
-      },
-      publisher: {
-        '@type': 'Organization',
-        name: 'Nishree Attire',
-        logo: {
-          '@type': 'ImageObject',
-          url: `${SITE_ORIGIN}/favicon.svg`,
-        },
-      },
-      mainEntityOfPage: `${SITE_ORIGIN}/blogs/${encodeURIComponent(post.slug)}`,
-    } : undefined,
+    structuredData,
   });
 
   useEffect(() => {

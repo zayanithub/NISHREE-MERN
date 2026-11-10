@@ -178,7 +178,7 @@ h1 em, h2 em, p em { color: inherit; font-weight: 400; }
 .product-name:hover { color: var(--maroon); }
 .product-material { color: var(--muted); font-size: 10px; }
 .product-prices { display: flex; flex-direction: column; align-items: flex-end; gap: 3px; padding-top: 2px; color: var(--maroon-deep); font-size: 11px; white-space: nowrap; }
-.product-prices del { color: #968a7f; font-size: 9px; }
+.product-prices del { color: #74665c; font-size: 9px; }
 .product-card-offer { padding: 2px 5px; border: 1px solid #e6d5bd; border-radius: 2px; background: #f7f1e7; color: #76552d; font-size: 7px; font-weight: 650; letter-spacing: .04em; line-height: 1.2; text-transform: uppercase; }
 .product-rating { margin: 8px 0 0; color: var(--muted); font-size: 10px; }
 .product-rating span { color: var(--gold); }
@@ -263,7 +263,7 @@ h1 em, h2 em, p em { color: inherit; font-weight: 400; }
 .drawer-empty h3 { max-width: 280px; margin: 11px 0; font-size: 34px; }
 .drawer-empty p { max-width: 280px; margin-bottom: 24px; color: var(--muted); font-size: 12px; line-height: 1.7; }
 .drawer-loading { flex: 1; display: grid; place-items: center; color: var(--muted); font-size: 13px; }
-.signature-reveal { position: fixed; inset: 0; z-index: 90; display: grid; place-items: center; overflow: hidden; pointer-events: none; background: radial-gradient(circle at 50% 44%, #fffdf8 0, #f8f2e9 55%, #efe4d4 100%); color: var(--maroon); will-change: opacity; }
+.signature-reveal { position: fixed; inset: 0; z-index: 90; display: grid; place-items: center; overflow: hidden; pointer-events: none; background: transparent; color: var(--maroon); will-change: opacity; }
 .signature-reveal::before { position: absolute; inset: -30%; background: repeating-linear-gradient(160deg, transparent 0 31px, rgba(168,133,77,.055) 32px 34px, transparent 35px 68px); content: ""; animation: reveal-fabric-drift 8s linear infinite; }
 .signature-reveal-content { position: relative; z-index: 1; width: min(760px, calc(100% - 30px)); padding: 25px 0; text-align: center; }
 .signature-reveal-caption { display: block; margin-bottom: 20px; color: #8b6e48; font-size: 9px; font-weight: 700; letter-spacing: .34em; }
@@ -1014,7 +1014,7 @@ h1 em, h2 em, p em { color: inherit; font-weight: 400; }
   -webkit-line-clamp: 2;
 }
 .product-name:hover { color: #a20d26; }
-.product-material { color: #83756b; font-size: 9px; }
+.product-material { color: #74665c; font-size: 9px; }
 .product-prices {
   align-items: flex-start;
   gap: 4px;

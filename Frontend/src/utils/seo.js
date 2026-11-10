@@ -3,6 +3,16 @@ import { useEffect } from 'react';
 const SITE_ORIGIN = (import.meta.env.VITE_SITE_URL || 'https://www.nishree.in').replace(/\/$/, '');
 const JSON_LD_ID = 'nishree-seo-jsonld';
 
+export function absoluteSiteUrl(value) {
+  if (typeof value !== 'string' || !value.trim()) return '';
+  try {
+    const url = new URL(value.trim(), SITE_ORIGIN);
+    return ['http:', 'https:'].includes(url.protocol) ? url.href : '';
+  } catch {
+    return '';
+  }
+}
+
 function setMeta(attribute, key, content) {
   let element = document.head.querySelector(`meta[${attribute}="${key}"]`);
   if (!element) {
@@ -35,7 +45,7 @@ export function applySeoMeta({
   const canonicalUrl = new URL(path, SITE_ORIGIN);
   canonicalUrl.search = '';
   canonicalUrl.hash = '';
-  const imageUrl = new URL(image, SITE_ORIGIN).href;
+  const imageUrl = absoluteSiteUrl(image);
   const safeDescription = String(description || '').replace(/\s+/g, ' ').trim().slice(0, 160);
 
   document.title = title;

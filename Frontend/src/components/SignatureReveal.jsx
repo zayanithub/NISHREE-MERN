@@ -55,8 +55,8 @@ export default function SignatureReveal({
       animate={{ opacity: 0 }}
       transition={{
         opacity: {
-          delay: 1.62,
-          duration: 0.48,
+          delay: 0.4,
+          duration: 0.6,
           ease: "easeInOut",
         },
       }}

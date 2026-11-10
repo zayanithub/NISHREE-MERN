@@ -1,5 +1,5 @@
 import { useLocation } from 'react-router-dom';
-import { SITE_ORIGIN, useSeoMeta } from '../utils/seo';
+import { useSeoMeta } from '../utils/seo';
 
 const publicPages = {
   '/': {
@@ -105,34 +105,10 @@ export default function RouteSeo() {
   const query = new URLSearchParams(location.search);
   const hasIndexableFilters = [...query.keys()].some((key) => indexableQueryKeys.has(key));
   const robots = metadata.robots || (hasIndexableFilters ? 'noindex,follow' : 'index,follow');
-  const structuredData = location.pathname === '/'
-    ? [
-      {
-        '@context': 'https://schema.org',
-        '@type': 'Organization',
-        name: 'Nishree Attire',
-        url: `${SITE_ORIGIN}/`,
-        logo: `${SITE_ORIGIN}/favicon.svg`,
-      },
-      {
-        '@context': 'https://schema.org',
-        '@type': 'WebSite',
-        name: 'Nishree Attire',
-        url: `${SITE_ORIGIN}/`,
-        potentialAction: {
-          '@type': 'SearchAction',
-          target: `${SITE_ORIGIN}/shop?search={search_term_string}`,
-          'query-input': 'required name=search_term_string',
-        },
-      },
-    ]
-    : undefined;
-
   useSeoMeta({
     ...metadata,
     path: location.pathname,
     robots,
-    structuredData,
   });
   return null;
 }

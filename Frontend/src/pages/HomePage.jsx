@@ -273,7 +273,7 @@ export default function HomePage() {
                 alt=""
                 width="1672"
                 height="941"
-                sizes="100vw"
+                sizes="(max-width: 600px) 200vw, 100vw"
                 loading={activeHeroIndex === 0 ? "eager" : "lazy"}
                 fetchPriority={activeHeroIndex === 0 ? "high" : "auto"}
                 decoding="async"

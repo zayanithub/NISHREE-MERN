@@ -27,15 +27,6 @@
           "value": "no-cache, must-revalidate"
         }
       ]
-    },
-    {
-      "source": "/.well-known/ai-catalog.json",
-      "headers": [
-        {
-          "key": "Access-Control-Allow-Origin",
-          "value": "*"
-        }
-      ]
     }
   ],
   "rewrites": [
