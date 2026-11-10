@@ -11,4 +11,4 @@ Disallow: /forgot-password
 Disallow: /orders
 Disallow: /wishlist
 
-Sitemap: https://www.nishree.in/sitemap.xml
+Sitemap: https://nishree.in/sitemap.xml

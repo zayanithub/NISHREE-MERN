@@ -1,6 +1,6 @@
 import { useEffect } from 'react';
 
-const SITE_ORIGIN = (import.meta.env.VITE_SITE_URL || 'https://www.nishree.in').replace(/\/$/, '');
+const SITE_ORIGIN = (import.meta.env.VITE_SITE_URL || 'https://nishree.in').replace(/\/$/, '');
 const JSON_LD_ID = 'nishree-seo-jsonld';
 
 export function absoluteSiteUrl(value) {

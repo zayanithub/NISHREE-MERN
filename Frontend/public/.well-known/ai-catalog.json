@@ -1,0 +1,32 @@
+{
+  "name": "Nishree Attire",
+  "description": "A saree boutique with public product collections, new arrivals, styling guidance, an atelier story, and a journal.",
+  "url": "https://nishree.in/",
+  "pages": [
+    {
+      "name": "Saree collections",
+      "url": "https://nishree.in/shop"
+    },
+    {
+      "name": "New arrivals",
+      "url": "https://nishree.in/new-arrivals"
+    },
+    {
+      "name": "Collections by style",
+      "url": "https://nishree.in/product_hub"
+    },
+    {
+      "name": "Find your drape",
+      "url": "https://nishree.in/find-your-drape"
+    },
+    {
+      "name": "Journal",
+      "url": "https://nishree.in/blogs"
+    },
+    {
+      "name": "About the boutique",
+      "url": "https://nishree.in/about"
+    }
+  ],
+  "note": "Informational content index only; not a standardized agent-discovery manifest."
+}

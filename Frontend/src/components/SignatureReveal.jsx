@@ -1,9 +1,7 @@
 import { useCallback, useEffect, useRef } from "react";
-import { motion, useReducedMotion } from "framer-motion";
+import useReducedMotionPreference from '../hooks/useReducedMotionPreference';
 
 const brandLines = ["NISHREE", "ATTIRE"];
-
-const EASE = [0.22, 1, 0.36, 1];
 
 const letterGroups = (() => {
   let index = 0;
@@ -20,7 +18,7 @@ const letterGroups = (() => {
 export default function SignatureReveal({
   onComplete,
 }) {
-  const reduceMotion = useReducedMotion();
+  const reduceMotion = useReducedMotionPreference();
 
   const completedRef = useRef(false);
   const callbackRef = useRef(onComplete);
@@ -37,54 +35,34 @@ export default function SignatureReveal({
     callbackRef.current?.();
   }, []);
 
-  // Respect reduced-motion preferences without leaving
-  // the parent application waiting for the intro to finish.
+  const handleAnimationEnd = useCallback((event) => {
+    if (event.target === event.currentTarget && event.animationName === 'signature-reveal-exit') {
+      handleComplete();
+    }
+  }, [handleComplete]);
+
   useEffect(() => {
     if (reduceMotion) {
       handleComplete();
+      return undefined;
     }
+    const timeout = window.setTimeout(handleComplete, 1_000);
+    return () => window.clearTimeout(timeout);
   }, [reduceMotion, handleComplete]);
 
   if (reduceMotion) return null;
 
   return (
-    <motion.div
+    <div
       className="signature-reveal"
       aria-hidden="true"
-      initial={{ opacity: 1 }}
-      animate={{ opacity: 0 }}
-      transition={{
-        opacity: {
-          delay: 0.4,
-          duration: 0.6,
-          ease: "easeInOut",
-        },
-      }}
-      onAnimationComplete={handleComplete}
+      onAnimationEnd={handleAnimationEnd}
     >
       <div className="signature-reveal-content">
-
-        {/* Brand tagline */}
-        <motion.span
-          className="signature-reveal-caption"
-          initial={{
-            opacity: 0,
-            y: 8,
-          }}
-          animate={{
-            opacity: 1,
-            y: 0,
-          }}
-          transition={{
-            duration: 0.55,
-            delay: 0.08,
-            ease: EASE,
-          }}
-        >
+        <span className="signature-reveal-caption">
           ELEGANCE IN EVERY THREAD
-        </motion.span>
+        </span>
 
-        {/* Animated brand wordmark */}
         <h1
           className="signature-reveal-wordmark"
           aria-label="Nishree Attire"
@@ -95,33 +73,18 @@ export default function SignatureReveal({
               key={line}
             >
               {letters.map(({ letter, index }) => (
-                <motion.span
+                <span
                   className="signature-reveal-letter"
                   key={`${line}-${index}`}
-                  initial={{
-                    opacity: 0,
-                    y: 14,
-                    filter: "blur(8px)",
-                  }}
-                  animate={{
-                    opacity: 1,
-                    y: 0,
-                    filter: "blur(0px)",
-                  }}
-                  transition={{
-                    duration: 0.46,
-                    delay: index * 0.048,
-                    ease: EASE,
-                  }}
+                  style={{ '--letter-index': index }}
                 >
                   {letter}
-                </motion.span>
+                </span>
               ))}
             </span>
           ))}
         </h1>
 
-        {/* Elegant animated signature waves */}
         <svg
           className="signature-reveal-waves"
           viewBox="0 0 760 82"
@@ -129,61 +92,25 @@ export default function SignatureReveal({
           aria-hidden="true"
           focusable="false"
         >
-          <motion.path
+          <path
             className="signature-reveal-wave"
+            pathLength="1"
             d="M0 38 C92 6 145 70 238 38 S384 6 476 38 622 70 760 31"
             fill="none"
             stroke="currentColor"
             strokeWidth="1.2"
-            initial={{
-              pathLength: 0,
-              opacity: 0,
-            }}
-            animate={{
-              pathLength: 1,
-              opacity: 0.8,
-            }}
-            transition={{
-              pathLength: {
-                delay: 0.45,
-                duration: 0.9,
-                ease: EASE,
-              },
-              opacity: {
-                delay: 0.45,
-                duration: 0.3,
-              },
-            }}
           />
 
-          <motion.path
+          <path
             className="signature-reveal-wave"
+            pathLength="1"
             d="M0 53 C92 21 145 85 238 53 S384 21 476 53 622 85 760 46"
             fill="none"
             stroke="currentColor"
             strokeWidth="0.8"
-            initial={{
-              pathLength: 0,
-              opacity: 0,
-            }}
-            animate={{
-              pathLength: 1,
-              opacity: 0.45,
-            }}
-            transition={{
-              pathLength: {
-                delay: 0.58,
-                duration: 0.82,
-                ease: EASE,
-              },
-              opacity: {
-                delay: 0.58,
-                duration: 0.3,
-              },
-            }}
           />
         </svg>
       </div>
-    </motion.div>
+    </div>
   );
 }

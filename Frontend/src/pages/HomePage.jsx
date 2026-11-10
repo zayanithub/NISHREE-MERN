@@ -1,8 +1,7 @@
-import { useCallback, useEffect, useRef, useState } from "react";
+import { lazy, Suspense, useCallback, useEffect, useRef, useState } from "react";
 import {
   ArrowDown,
   ArrowRight,
-  ArrowUpRight,
   ChevronLeft,
   ChevronRight,
   Flower2,
@@ -12,16 +11,17 @@ import {
   Play,
 } from "lucide-react";
 import { Link } from "react-router-dom";
-import { AnimatePresence, motion, useReducedMotion } from "framer-motion";
 
 import { catalogApi } from "../api/catalogApi";
 import { homepageApi } from "../api/homepageApi";
-import { Reveal } from "../components/Reveal";
-import ProductSection from "../components/ProductSection";
 import CataloguePreviewNotice from "../components/CataloguePreviewNotice";
-import HomeDiscoverySections from "../components/home/HomeDiscoverySections";
-import { ErrorState, LoadingState } from "../components/States";
+import { SkeletonGrid } from "../components/States";
 import ResponsiveImage from "../components/ResponsiveImage";
+import useReducedMotionPreference from "../hooks/useReducedMotionPreference";
+
+const HomeCollectionSection = lazy(() => import("../components/home/HomeCollectionSection"));
+const ProductSection = lazy(() => import("../components/ProductSection"));
+const HomeDiscoverySections = lazy(() => import("../components/home/HomeDiscoverySections"));
 
 
 /* ------------------------------------------
@@ -49,6 +49,24 @@ const isCancelledRequest = (error, signal) =>
   error?.name === "CanceledError" ||
   error?.code === "ERR_CANCELED";
 
+function ProductSectionFallback() {
+  return (
+    <section className="section-shell product-section" aria-busy="true">
+      <div className="section-heading-row">
+        <div>
+          <span className="eyebrow">A considered collection</span>
+          <h2>Exclusive picks</h2>
+        </div>
+        <Link className="text-link" to="/shop">
+          Explore all sarees
+          <ArrowRight size={15} aria-hidden="true" />
+        </Link>
+      </div>
+      <SkeletonGrid count={4} />
+    </section>
+  );
+}
+
 /* ------------------------------------------
    Home page
 ------------------------------------------ */
@@ -66,7 +84,7 @@ export default function HomePage() {
 
   const requestControllersRef = useRef({});
 
-  const shouldReduceMotion = useReducedMotion();
+  const shouldReduceMotion = useReducedMotionPreference();
   const imagesForSection = (section, fallback) => {
     const images = homepageImageSections[section];
     if (homepageImagesLoaded) return Array.isArray(images) ? images : [];
@@ -233,23 +251,6 @@ export default function HomePage() {
      Hero animation settings
   ------------------------------------------ */
 
-  const heroInitial = shouldReduceMotion
-    ? false
-    : {
-        opacity: 0,
-        y: 18,
-      };
-
-  const heroTransition = shouldReduceMotion
-    ? {
-        duration: 0,
-      }
-    : {
-        duration: 0.85,
-        delay: 0.15,
-        ease: [0.22, 1, 0.36, 1],
-      };
-
   return (
     <main className="home-page">
       {/* ======================================
@@ -258,41 +259,28 @@ export default function HomePage() {
 
       <section className="hero" aria-labelledby="hero-title">
         <div className="hero-image-track" aria-hidden="true" role="presentation">
-          <AnimatePresence mode="sync" initial={false}>
-            <motion.div
-              key={`${activeHeroIndex}-${visibleHeroSlides[activeHeroIndex]?._id || visibleHeroSlides[activeHeroIndex]?.url}`}
-              initial={shouldReduceMotion || activeHeroIndex === 0 ? false : { opacity: 0, scale: 1.025 }}
-              animate={{ opacity: 1, scale: 1 }}
-              exit={shouldReduceMotion ? { opacity: 0 } : { opacity: 0, scale: 1.015 }}
-              transition={shouldReduceMotion ? { duration: 0 } : { duration: 1.05, ease: [0.22, 1, 0.36, 1] }}
-              style={{ position: "absolute", inset: 0, width: "100%", height: "100%" }}
-            >
-              <ResponsiveImage
-                src={visibleHeroSlides[activeHeroIndex]?.url}
-                responsiveKey={visibleHeroSlides[activeHeroIndex]?.url}
-                alt=""
-                width="1672"
-                height="941"
-                sizes="(max-width: 600px) 200vw, 100vw"
-                loading={activeHeroIndex === 0 ? "eager" : "lazy"}
-                fetchPriority={activeHeroIndex === 0 ? "high" : "auto"}
-                decoding="async"
-              />
-            </motion.div>
-          </AnimatePresence>
+          <div
+            key={`${activeHeroIndex}-${visibleHeroSlides[activeHeroIndex]?._id || visibleHeroSlides[activeHeroIndex]?.url}`}
+            className={`hero-slide${activeHeroIndex === 0 ? ' is-first' : ''}`}
+          >
+            <ResponsiveImage
+              src={visibleHeroSlides[activeHeroIndex]?.url}
+              responsiveKey={visibleHeroSlides[activeHeroIndex]?.url}
+              alt=""
+              width="1672"
+              height="941"
+              sizes="100vw"
+              loading={activeHeroIndex === 0 ? "eager" : "lazy"}
+              fetchPriority={activeHeroIndex === 0 ? "high" : "auto"}
+              decoding="async"
+            />
+          </div>
         </div>
 
         <div className="hero-shade" aria-hidden="true" />
 
         <div className="hero-content">
-          <motion.div
-            initial={heroInitial}
-            animate={{
-              opacity: 1,
-              y: 0,
-            }}
-            transition={heroTransition}
-          >
+          <div className="hero-copy">
             <span className="hero-eyebrow">
               <span aria-hidden="true" />
               THE NISHREE EDIT · 2026
@@ -320,7 +308,7 @@ export default function HomePage() {
                 <MoveUpRight size={15} aria-hidden="true" />
               </Link>
             </div>
-          </motion.div>
+          </div>
 
           <div className="hero-footnote">
             <span>{String(activeHeroIndex + 1).padStart(2, "0")} / {String(visibleHeroSlides.length).padStart(2, "0")}</span>
@@ -402,113 +390,41 @@ export default function HomePage() {
           COLLECTION CATEGORIES
       ====================================== */}
 
-      <section className="section-shell collection-intro" id="collection">
-        <Reveal className="section-heading-row">
-          <div>
-            <span className="eyebrow">A world of colour &amp; character</span>
-
-            <h2>
-              Find your <em>kind</em> of beautiful.
-            </h2>
-
-            <p className="section-deck">
-              Explore the collection through the stories and traditions that
-              inspire each edit.
-            </p>
-          </div>
-
-          <Link className="text-link" to="/shop">
-            View all sarees
-            <ArrowRight size={15} aria-hidden="true" />
-          </Link>
-        </Reveal>
-
-        {categoryStatus === "loading" ? (
-          <LoadingState label="Opening the collection…" />
-        ) : categoryStatus === "error" ? (
-          <ErrorState
-            message="We could not load the collection categories."
-            onRetry={retryCategories}
-          />
-        ) : categories.length > 0 ? (
-          <div className="category-grid">
-            {categories.map((category, index) => (
-              <Reveal
-                key={category._id ?? category.slug}
-                delay={index * 0.07}
-                className={`category-card category-card-${index + 1}`}
-              >
-                <Link
-                  to={`/collections/${category.slug}`}
-                  aria-label={`Explore ${category.name}`}
-                >
-                  <ResponsiveImage
-                    src={category.image?.url || categoryImages[index % categoryImages.length]?.url || categoryImages[index % categoryImages.length]}
-                    alt={category.image?.url ? "" : categoryImages[index % categoryImages.length]?.altText || ""}
-                    sizes="(max-width: 800px) 45vw, 25vw"
-                    loading="lazy"
-                    decoding="async"
-                    width="720"
-                    height="880"
-                  />
-
-                  <span className="category-scrim" aria-hidden="true" />
-
-                  <span className="category-copy">
-                    <small>THE NISHREE COLLECTION</small>
-
-                    <strong>{category.name}</strong>
-
-                    <span>
-                      {category.description ||
-                        "A considered edit from Nishree Attire."}
-                    </span>
-                  </span>
-
-                  <span className="category-arrow" aria-hidden="true">
-                    <ArrowUpRight size={18} />
-                  </span>
-                </Link>
-              </Reveal>
-            ))}
-          </div>
-        ) : (
-          <div className="category-empty">
-            <p>
-              Our collection is being prepared. Browse all available pieces in
-              the shop.
-            </p>
-
-            <Link className="text-link" to="/shop">
-              Visit the shop
-              <ArrowRight size={15} aria-hidden="true" />
-            </Link>
-          </div>
-        )}
-      </section>
+      <Suspense fallback={null}>
+        <HomeCollectionSection
+          categories={categories}
+          categoryImages={categoryImages}
+          categoryStatus={categoryStatus}
+          onRetry={retryCategories}
+        />
+      </Suspense>
 
       {/* ======================================
           FEATURED PRODUCTS
       ====================================== */}
 
-      <ProductSection
-        title="Exclusive picks"
-        kicker="A considered collection"
-        products={featured}
-        loading={featuredStatus === "loading"}
-        error={
-          featuredStatus === "error"
-            ? "Our curated pieces are unavailable just now."
-            : ""
-        }
-        onRetry={retryFeatured}
-        linkText="Explore all sarees"
-      />
+      <Suspense fallback={<ProductSectionFallback />}>
+        <ProductSection
+          title="Exclusive picks"
+          kicker="A considered collection"
+          products={featured}
+          loading={featuredStatus === "loading"}
+          error={
+            featuredStatus === "error"
+              ? "Our curated pieces are unavailable just now."
+              : ""
+          }
+          onRetry={retryFeatured}
+          linkText="Explore all sarees"
+        />
+      </Suspense>
 
-      <HomeDiscoverySections
-        featured={featured}
-        socialImages={socialImages}
-      />
+      <Suspense fallback={null}>
+        <HomeDiscoverySections
+          featured={featured}
+          socialImages={socialImages}
+        />
+      </Suspense>
 
       {/* ======================================
           CLOSING CALL TO ACTION

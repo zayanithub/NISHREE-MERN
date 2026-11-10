@@ -1,7 +1,6 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { createPortal } from 'react-dom';
 import { ArrowDownRight, ArrowRight, ChevronDown, X } from 'lucide-react';
-import { AnimatePresence, motion, useReducedMotion } from 'framer-motion';
 import { Link, useLocation } from 'react-router-dom';
 import { allCollections } from '../data/collectionCatalog';
 import { catalogApi } from '../api/catalogApi';
@@ -22,21 +21,17 @@ function CollectionLink({ collection, onClick, className = '', children, ...link
   );
 }
 
-function MegaMenu({ collection, onClose, reduceMotion }) {
+function MegaMenu({ collection, onClose }) {
   const highlights = collection.children.length
     ? collection.children.slice(0, 3)
     : [collection];
 
   return (
-    <motion.div
+    <div
       className={`secondary-category-menu${collection.children.length > 5 ? ' has-many' : ''}${collection.children.length === 0 ? ' has-no-subcategories' : ''}`}
       id={`category-menu-${collection.slug}`}
       role="region"
       aria-label={`${collection.name} collections`}
-      initial={{ opacity: 0, y: reduceMotion ? 0 : -8 }}
-      animate={{ opacity: 1, y: 0 }}
-      exit={{ opacity: 0, y: reduceMotion ? 0 : -5 }}
-      transition={{ duration: reduceMotion ? 0 : 0.22, ease: [0.22, 1, 0.36, 1] }}
     >
       <div className="secondary-category-menu-inner">
         <div className="mega-menu-intro">
@@ -113,11 +108,11 @@ function MegaMenu({ collection, onClose, reduceMotion }) {
           </span>
         </Link>
       </div>
-    </motion.div>
+    </div>
   );
 }
 
-function MobileSubcategoryDrawer({ collection, onClose, reduceMotion }) {
+function MobileSubcategoryDrawer({ collection, onClose }) {
   const closeButtonRef = useRef(null);
   useEffect(() => {
     closeButtonRef.current?.focus({ preventScroll: true });
@@ -146,27 +141,19 @@ function MobileSubcategoryDrawer({ collection, onClose, reduceMotion }) {
   };
 
   return createPortal(
-    <motion.div
+    <div
       className="mobile-category-overlay"
-      initial={{ opacity: 0 }}
-      animate={{ opacity: 1 }}
-      exit={{ opacity: 0 }}
-      transition={{ duration: reduceMotion ? 0 : 0.2 }}
       onPointerDown={(event) => {
         if (event.target === event.currentTarget) onClose(true);
       }}
     >
-      <motion.section
+      <section
         className="mobile-category-drawer"
         role="dialog"
         aria-modal="true"
         aria-labelledby="mobile-category-title"
         id={`category-menu-${collection.slug}`}
         onKeyDown={trapFocus}
-        initial={{ y: reduceMotion ? 0 : 28 }}
-        animate={{ y: 0 }}
-        exit={{ y: reduceMotion ? 0 : 20 }}
-        transition={{ duration: reduceMotion ? 0 : 0.26, ease: [0.22, 1, 0.36, 1] }}
       >
         <div className="mobile-category-drawer-handle" aria-hidden="true" />
         <div className="mobile-category-drawer-heading">
@@ -204,15 +191,14 @@ function MobileSubcategoryDrawer({ collection, onClose, reduceMotion }) {
         <CollectionLink collection={collection} className="mobile-category-view-all" onClick={onClose}>
           View all {collection.name}<ArrowRight size={15} aria-hidden="true" />
         </CollectionLink>
-      </motion.section>
-    </motion.div>,
+      </section>
+    </div>,
     document.body,
   );
 }
 
 export default function SecondaryCategoryNavigation({ showCatalogLinks = false }) {
   const location = useLocation();
-  const reduceMotion = useReducedMotion();
   const navigationRef = useRef(null);
   const closeTimerRef = useRef(null);
   const menuButtonRefs = useRef(new Map());
@@ -418,14 +404,10 @@ export default function SecondaryCategoryNavigation({ showCatalogLinks = false }
           })}
         </ul>
       </div>
-      <AnimatePresence initial={false}>
-        {openCollection && openMenu?.source !== 'mobile' && (
-          <MegaMenu collection={openCollection} onClose={closeMenu} reduceMotion={reduceMotion} />
-        )}
-      </AnimatePresence>
-      <AnimatePresence>
-        {mobileCollection && <MobileSubcategoryDrawer key={mobileCollection.slug} collection={mobileCollection} onClose={closeMobileMenu} reduceMotion={reduceMotion} />}
-      </AnimatePresence>
+      {openCollection && openMenu?.source !== 'mobile' && (
+        <MegaMenu collection={openCollection} onClose={closeMenu} />
+      )}
+      {mobileCollection && <MobileSubcategoryDrawer key={mobileCollection.slug} collection={mobileCollection} onClose={closeMobileMenu} />}
     </nav>
   );
 }

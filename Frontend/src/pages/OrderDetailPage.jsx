@@ -10,6 +10,7 @@ import { useAuth } from '../auth/useAuth';
 import { ErrorState, LoadingState } from '../components/States';
 import { useStoreSettings } from '../settings/useStoreSettings';
 import { formatDate, formatPrice } from '../utils/format';
+import ResponsiveImage from '../components/ResponsiveImage';
 import { downloadInvoicePdf, downloadOrderSummary } from '../utils/orderDocuments';
 
 const readable = (value = '') => value.replaceAll('_', ' ');
@@ -286,7 +287,7 @@ export default function OrderDetailPage() {
       <section className="order-items-panel">
         <div className="section-heading-row"><div><span className="eyebrow">Your selection</span><h2>Items in this order</h2><p className="order-section-description">Every item and option included in this purchase.</p></div></div>
         {order.items?.map((item) => <article className="order-detail-item" key={item._id}>
-          <div className="order-detail-image">{item.image && <img src={item.image} alt={item.productName || ''} loading="lazy" decoding="async" width="140" height="170" />}</div>
+          <div className="order-detail-image">{item.image && <ResponsiveImage src={item.image} alt={item.productName || ''} loading="lazy" decoding="async" width="140" height="170" sizes="(max-width: 600px) 54px, 83px" />}</div>
           <div className="order-detail-item-copy"><strong>{item.productName}</strong>{item.categoryName && <small>Category · {item.categoryName}</small>}{item.variantName && <small>Selected option · {item.variantName}</small>}<span>SKU · {item.sku}</span><span>Quantity · {item.quantity}</span><span>{formatPrice(item.unitPrice, order.currency)} each</span>{Number(item.discountAmount) > 0 && <span>Discount · −{formatPrice(item.discountAmount, order.currency)}</span>}
             {returnEligible && <div className="order-request-links"><Link to={`/account/returns?orderId=${order._id}&orderItemId=${item._id}&type=return`}>Request return</Link><Link to={`/account/returns?orderId=${order._id}&orderItemId=${item._id}&type=exchange`}>Request exchange</Link></div>}
           </div><strong>{formatPrice(item.lineTotal, order.currency)}</strong>

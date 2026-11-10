@@ -1,9 +1,10 @@
 import { useRef } from 'react';
 import { ArrowRight, ChevronLeft, ChevronRight } from 'lucide-react';
 import { Link } from 'react-router-dom';
-import { motion, useReducedMotion } from 'framer-motion';
 import ProductCard from '../ProductCard';
+import { Reveal } from '../Reveal';
 import { ErrorState, SkeletonGrid } from '../States';
+import useReducedMotionPreference from '../../hooks/useReducedMotionPreference';
 
 export default function HomeProductCarousel({
   title,
@@ -17,7 +18,7 @@ export default function HomeProductCarousel({
   id,
 }) {
   const trackRef = useRef(null);
-  const reduceMotion = useReducedMotion();
+  const reduceMotion = useReducedMotionPreference();
   const moveTrack = (direction) => {
     const track = trackRef.current;
     if (!track) return;
@@ -28,14 +29,15 @@ export default function HomeProductCarousel({
   };
 
   return (
-    <motion.section
+    <Reveal
+      as="section"
       id={id}
       className="home-product-carousel section-shell"
       aria-labelledby={`${id || title.toLowerCase().replace(/[^a-z0-9]+/g, '-')}-title`}
-      initial={reduceMotion ? false : { opacity: 0, y: 16 }}
-      whileInView={reduceMotion ? undefined : { opacity: 1, y: 0 }}
-      viewport={{ once: true, amount: 0.12 }}
-      transition={{ duration: 0.48, ease: [0.22, 1, 0.36, 1] }}
+      once
+      amount={0.12}
+      distance={16}
+      duration={0.48}
     >
       <div className="home-carousel-heading">
         <div>
@@ -63,16 +65,18 @@ export default function HomeProductCarousel({
       ) : products.length ? (
         <div className="home-carousel-viewport" ref={trackRef} tabIndex={0} role="region" aria-label={`${title} products`}>
           {products.map((product, index) => (
-            <motion.div
+            <Reveal
+              as="div"
               className="home-carousel-product min-w-0"
               key={product._id || product.slug}
-              initial={reduceMotion ? false : { opacity: 0, y: 12 }}
-              whileInView={reduceMotion ? undefined : { opacity: 1, y: 0 }}
-              viewport={{ once: true, amount: 0.12 }}
-              transition={{ duration: 0.35, delay: reduceMotion ? 0 : Math.min(index * 0.055, 0.22) }}
+              once
+              amount={0.12}
+              distance={12}
+              duration={0.35}
+              delay={reduceMotion ? 0 : Math.min(index * 0.055, 0.22)}
             >
               <ProductCard product={product} index={index} />
-            </motion.div>
+            </Reveal>
           ))}
         </div>
       ) : (
@@ -81,6 +85,6 @@ export default function HomeProductCarousel({
           <p>There are no pieces to show here yet. Please return soon.</p>
         </div>
       )}
-    </motion.section>
+    </Reveal>
   );
 }

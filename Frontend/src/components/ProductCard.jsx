@@ -61,7 +61,7 @@ export default function ProductCard({ product, index = 0 }) {
       </div>
       {!isAvailable && <span className="product-stock-badge">Out of stock</span>}
       <button type="button" className={`icon-button wishlist-toggle${isSaved ? ' is-saved' : ''}`} onClick={save} aria-label={isSaved ? `Remove ${product.name} from wishlist` : `Save ${product.name} to wishlist`} aria-pressed={isSaved}><Heart size={17} fill={isSaved ? 'currentColor' : 'none'} /></button>
-      <button className="quick-add" type="button" onClick={add} disabled={busy || !isAvailable} aria-label={isAvailable ? `Add ${product.name} to bag` : `${product.name} is out of stock`}>{busy ? 'Adding…' : isAvailable ? 'Add to bag' : 'Out of stock'}{isAvailable && <ArrowUpRight size={15} />}</button>
+      <button className="quick-add" type="button" onClick={add} disabled={busy || !isAvailable} aria-label={busy ? `Adding ${product.name} to bag` : isAvailable ? `Add to bag: ${product.name}` : `Out of stock: ${product.name}`}>{busy ? 'Adding…' : isAvailable ? 'Add to bag' : 'Out of stock'}{isAvailable && <ArrowUpRight size={15} aria-hidden="true" />}</button>
     </div>
     <div className="product-card-copy">
       <div><Link to={`/products/${product.slug}`} className="product-name">{product.name}</Link><span className="product-material">{product.material || product.category?.name || 'Nishree Attire'}</span></div>

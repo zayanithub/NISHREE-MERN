@@ -4,6 +4,7 @@ import { Link } from 'react-router-dom';
 import { catalogApi } from '../api/catalogApi';
 import ProductCard from '../components/ProductCard';
 import { ErrorState, LoadingState } from '../components/States';
+import ResponsiveImage from '../components/ResponsiveImage';
 import heroImage from '../assets/saree girls image.jpg';
 import categoryImageOne from '../assets/saree product image 1.jpg';
 import categoryImageTwo from '../assets/saree images.jpg';
@@ -11,7 +12,7 @@ import categoryImageThree from '../assets/saree imagess.jpg';
 import categoryImageFour from '../assets/saree product image.jpg';
 import './ProductHubPage.css';
 
-const pageSize = 24;
+const pageSize = 12;
 const categoryFallbackImages = [categoryImageOne, categoryImageTwo, categoryImageThree, categoryImageFour];
 
 export default function ProductHubPage() {
@@ -92,7 +93,17 @@ export default function ProductHubPage() {
       <div className="hub-page-shell">
         <section className="hub-hero" aria-label="The Nishree collection">
           <div className="hub-hero-photo">
-            <img src={heroImage} alt="Sarees from the Nishree collection" fetchPriority="high" />
+            <ResponsiveImage
+              pictureClassName="hub-hero-picture"
+              src={heroImage}
+              responsiveKey="/assets/saree girls image.jpg"
+              alt="Sarees from the Nishree collection"
+              fetchPriority="high"
+              decoding="async"
+              width="1024"
+              height="1024"
+              sizes="(max-width: 600px) 100vw, (max-width: 900px) 55vw, 45vw"
+            />
             <span className="hub-photo-arch" />
             <span className="hub-hero-seal"><Sparkles size={16} /> THE NISHREE<br />COLLECTION</span>
           </div>
@@ -123,7 +134,7 @@ export default function ProductHubPage() {
                   aria-pressed={selectedCategory === category.slug}
                   onClick={() => chooseCategory(category.slug)}
                 >
-                  <span><img src={category.image?.url || categoryFallbackImages[index % categoryFallbackImages.length]} alt="" loading="lazy" /></span>
+                  <span><ResponsiveImage src={category.image?.url || categoryFallbackImages[index % categoryFallbackImages.length]} alt="" loading="lazy" decoding="async" sizes="(max-width: 600px) 132px, (max-width: 900px) 25vw, 16vw" /> </span>
                   <strong>{category.name}</strong>
                   <small>{category.productCount} {category.productCount === 1 ? 'piece' : 'pieces'} <ArrowUpRight size={11} /></small>
                 </button>

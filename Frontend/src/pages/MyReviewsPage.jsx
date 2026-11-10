@@ -5,6 +5,7 @@ import { toast } from 'sonner';
 import { customerApi } from '../api/customerApi';
 import { normalizeApiError } from '../api/client';
 import { EmptyState, ErrorState, LoadingState } from '../components/States';
+import ResponsiveImage from '../components/ResponsiveImage';
 import { useDialogFocus } from '../hooks/useDialogFocus';
 import { formatDate, productImage } from '../utils/format';
 
@@ -137,7 +138,7 @@ export default function MyReviewsPage() {
           {reviews.map((review) => (
             <article className="my-review-card" key={review._id}>
               <div className="my-review-product">
-                {productImage(review.product) && <img src={productImage(review.product)} alt="" loading="lazy" decoding="async" width="94" height="116" />}
+                {productImage(review.product) && <ResponsiveImage src={productImage(review.product)} alt="" loading="lazy" decoding="async" width="94" height="116" sizes="84px" />}
                 <div><span className="eyebrow">{review.order?.orderNumber || 'Verified order'}</span>{review.product?.slug ? <Link to={`/products/${review.product.slug}`}>{review.product.name}</Link> : <strong>{review.product?.name || 'Nishree piece'}</strong>}<small>Submitted {formatDate(review.createdAt)}</small></div>
               </div>
               <div className="my-review-copy">

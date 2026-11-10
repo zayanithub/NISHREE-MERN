@@ -536,9 +536,9 @@ export default function SiteHeader() {
             responsiveKey="/assets/Nishree Attire Navbar Logo.png"
             pictureClassName="brand-mark-image"
             alt="Nishree Attire"
-            width="1200"
-            height="967"
-            sizes="(max-width: 360px) 44px, (max-width: 600px) 61px, (max-width: 800px) 71px, 84px"
+            width="84"
+            height="68"
+            sizes="(max-width: 360px) 44px, (max-width: 600px) 51px, (max-width: 800px) 71px, 84px"
             decoding="async"
           />
         </Link>
@@ -608,7 +608,7 @@ export default function SiteHeader() {
             className="bag-link"
             type="button"
             onClick={() => setDrawerOpen(true)}
-            aria-label={`Open shopping bag, ${itemCount} items`}
+            aria-label={`Bag ${itemCount}, open shopping bag`}
           >
             <ShoppingBag
               size={19}

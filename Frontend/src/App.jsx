@@ -5,13 +5,13 @@ import { AuthProvider } from './auth/AuthContext';
 import { CartProvider } from './cart/CartContext';
 import { WishlistProvider } from './wishlist/WishlistContext';
 import StorefrontLayout from './layouts/StorefrontLayout';
-import AccountLayout from './layouts/AccountLayout';
 import ProtectedRoute from './components/ProtectedRoute';
 import { StoreSettingsProvider } from './settings/StoreSettingsContext';
 import AdminProtectedRoute from './admin/AdminProtectedRoute';
 import { ThemeProvider } from './theme/ThemeContext';
 import RouteSeo from './components/RouteSeo';
 
+const AccountLayout = lazy(() => import('./layouts/AccountLayout'));
 const HomePage = lazy(() => import('./pages/HomePage'));
 const NewArrivalsPage = lazy(() => import('./pages/NewArrivalsPage'));
 const AtelierPage = lazy(() => import('./pages/AtelierPage'));

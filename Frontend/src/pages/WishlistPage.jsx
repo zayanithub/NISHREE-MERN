@@ -4,6 +4,7 @@ import { ArrowRight, Check, Heart, ShoppingBag, Trash2 } from 'lucide-react';
 import { toast } from 'sonner';
 import { useCart } from '../cart/useCart';
 import { ErrorState, EmptyState, LoadingState } from '../components/States';
+import ResponsiveImage from '../components/ResponsiveImage';
 import { useWishlist } from '../wishlist/useWishlist';
 import { formatPrice, productImage } from '../utils/format';
 
@@ -86,7 +87,7 @@ export default function WishlistPage() {
             return (
               <article className={`wishlist-account-card${removingProduct === productId ? ' is-removing' : ''}`} key={product._id}>
                 <Link to={`/products/${product.slug}`} className="wishlist-account-image" aria-label={`View ${product.name}`}>
-                  {image ? <img src={image} alt={product.imageAltText || product.name} loading="lazy" decoding="async" /> : <span aria-hidden="true">N</span>}
+                  {image ? <ResponsiveImage src={image} alt={product.imageAltText || product.name} loading="lazy" decoding="async" sizes="(max-width: 700px) 88px, 118px" /> : <span aria-hidden="true">N</span>}
                 </Link>
                 <div className="wishlist-account-copy">
                   <span className="eyebrow">{product.material || product.category?.name || 'NISHREE ATTIRE'}</span>

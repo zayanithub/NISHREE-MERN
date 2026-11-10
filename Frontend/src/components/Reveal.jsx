@@ -1,4 +1,5 @@
-import { motion, useReducedMotion } from "framer-motion";
+import { useEffect, useRef, useState } from 'react';
+import useReducedMotionPreference from '../hooks/useReducedMotionPreference';
 
 const DIRECTIONS = {
   up: { x: 0, y: 1 },
@@ -7,8 +8,6 @@ const DIRECTIONS = {
   right: { x: 1, y: 0 },
   fade: { x: 0, y: 0 },
 };
-
-const DEFAULT_EASE = [0.22, 1, 0.36, 1];
 
 export function Reveal({
   children,
@@ -21,7 +20,7 @@ export function Reveal({
   duration = 0.7,
   delay = 0,
   initialScale = 0.98,
-  ease = DEFAULT_EASE,
+  ease = [0.22, 1, 0.36, 1],
 
   // Scroll settings
   once = true,
@@ -31,42 +30,45 @@ export function Reveal({
 
   ...props
 }) {
-  const shouldReduceMotion = useReducedMotion();
-
-  const Component = motion[as] ?? motion.div;
+  const elementRef = useRef(null);
+  const [isVisible, setIsVisible] = useState(false);
+  const shouldReduceMotion = useReducedMotionPreference();
+  const hasIntersectionObserver = typeof window !== 'undefined' && 'IntersectionObserver' in window;
+  const Component = as;
   const offset = DIRECTIONS[direction] ?? DIRECTIONS.up;
-
-  const hidden = {
-    opacity: 0,
-    x: offset.x * distance,
-    y: offset.y * distance,
-    scale: initialScale,
+  const style = {
+    ...props.style,
+    '--reveal-x': `${offset.x * distance}px`,
+    '--reveal-y': `${offset.y * distance}px`,
+    '--reveal-scale': initialScale,
+    '--reveal-duration': `${duration}s`,
+    '--reveal-delay': `${delay}s`,
+    '--reveal-ease': Array.isArray(ease) ? `cubic-bezier(${ease.join(',')})` : ease,
   };
 
-  const visible = {
-    opacity: 1,
-    x: 0,
-    y: 0,
-    scale: 1,
-  };
+  useEffect(() => {
+    const element = elementRef.current;
+    if (shouldReduceMotion || !element || !hasIntersectionObserver) return undefined;
+
+    const observer = new IntersectionObserver(([entry]) => {
+      setIsVisible(entry.isIntersecting);
+      if (entry.isIntersecting && once) observer.disconnect();
+    }, {
+      root: root || null,
+      rootMargin: margin,
+      threshold: Math.min(1, Math.max(0, amount)),
+    });
+
+    observer.observe(element);
+    return () => observer.disconnect();
+  }, [amount, hasIntersectionObserver, margin, once, root, shouldReduceMotion]);
 
   return (
     <Component
       {...props}
-      className={className}
-      initial={shouldReduceMotion ? false : hidden}
-      whileInView={shouldReduceMotion ? undefined : visible}
-      viewport={{
-        once,
-        amount,
-        margin,
-        ...(root ? { root } : {}),
-      }}
-      transition={{
-        duration,
-        delay,
-        ease,
-      }}
+      ref={elementRef}
+      className={`reveal${isVisible || shouldReduceMotion || !hasIntersectionObserver ? ' is-visible' : ''}${className ? ` ${className}` : ''}`}
+      style={style}
     >
       {children}
     </Component>

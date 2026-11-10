@@ -89,10 +89,9 @@ export default function SiteFooter() {
             <Link
               className="group inline-flex items-center gap-3 rounded-lg outline-none focus-visible:ring-2 focus-visible:ring-[#f5c6ad]/70"
               to="/"
-              aria-label="Nishree Attire home"
             >
               <span className="relative grid h-[4.25rem] w-[4.25rem] shrink-0 place-items-center overflow-hidden rounded-2xl border border-[#e8c697]/40 bg-transparent p-1 shadow-[0_8px_24px_rgba(0,0,0,0.25)] transition duration-300 group-hover:-translate-y-0.5 group-hover:rotate-2 group-hover:border-[#f5c6ad]/80 motion-reduce:transition-none">
-                <ResponsiveImage pictureClassName="block h-full w-full" className="footer-brand-mark h-full w-full object-contain" src={logo} responsiveKey="/assets/Nishree Attire Navbar Logo.png" alt="" loading="lazy" decoding="async" width="84" height="68" sizes="68px" />
+                <ResponsiveImage pictureClassName="block h-full w-full" className="footer-brand-mark h-full w-full object-contain" src={logo} responsiveKey="/assets/Nishree Attire Navbar Logo.png" alt="" loading="lazy" decoding="async" width="84" height="68" sizes="(max-width: 600px) 59px, 68px" />
               </span>
               <span>
                 <span className="block font-serif text-xl tracking-wide text-[#fff0dd]">Nishree Attire</span>
@@ -126,7 +125,7 @@ export default function SiteFooter() {
                     <Mail size={16} aria-hidden="true" />
                   </span>
                   <span className="min-w-0 pt-1.5">
-                    <span className="mb-1 block text-[0.62rem] font-semibold uppercase tracking-[0.16em] text-white/40">Email us</span>
+                    <span className="mb-1 block text-[0.62rem] font-semibold uppercase tracking-[0.16em] text-white/70">Email us</span>
                     <span className="break-all text-white/75">{supportEmail}</span>
                   </span>
                 </a>
@@ -140,7 +139,7 @@ export default function SiteFooter() {
                     <Phone size={16} aria-hidden="true" />
                   </span>
                   <span className="min-w-0 pt-1.5">
-                    <span className="mb-1 block text-[0.62rem] font-semibold uppercase tracking-[0.16em] text-white/40">Call us</span>
+                    <span className="mb-1 block text-[0.62rem] font-semibold uppercase tracking-[0.16em] text-white/70">Call us</span>
                     <span className="text-white/75">{supportPhone}</span>
                   </span>
                 </a>
@@ -151,7 +150,7 @@ export default function SiteFooter() {
                     <MapPin size={16} aria-hidden="true" />
                   </span>
                   <span className="min-w-0 pt-1.5">
-                    <span className="mb-1 block text-[0.62rem] font-semibold uppercase tracking-[0.16em] text-white/40">Visit us</span>
+                    <span className="mb-1 block text-[0.62rem] font-semibold uppercase tracking-[0.16em] text-white/70">Visit us</span>
                     <span className="block leading-6 text-white/75">{businessAddress}</span>
                   </span>
                 </div>
@@ -163,9 +162,9 @@ export default function SiteFooter() {
           </section>
         </div>
 
-        <div className="flex flex-col gap-4 pt-5 text-xs text-white/45 sm:flex-row sm:items-center sm:justify-between sm:gap-5 sm:pt-6">
+        <div className="flex flex-col gap-4 pt-5 text-xs text-white/70 sm:flex-row sm:items-center sm:justify-between sm:gap-5 sm:pt-6">
           <span>© {currentYear} Nishree Attire. All rights reserved.</span>
-          <span className="text-white/40">Made for the moments you keep.</span>
+          <span className="text-white/70">Made for the moments you keep.</span>
           <Link
             className="group inline-flex w-fit items-center gap-1.5 rounded-sm font-semibold text-[#f0c3a9] outline-none transition duration-200 hover:text-white focus-visible:ring-2 focus-visible:ring-[#f5c6ad]/70 motion-reduce:transition-none"
             to="/shop"

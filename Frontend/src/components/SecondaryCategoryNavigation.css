@@ -132,6 +132,12 @@
   background: color-mix(in srgb, var(--paper) 97%, white);
   color: var(--ink);
   box-shadow: 0 28px 60px rgba(44, 21, 28, .16);
+  animation: category-menu-enter .22s cubic-bezier(.22, 1, .36, 1) both;
+}
+
+@keyframes category-menu-enter {
+  from { opacity: 0; transform: translateY(-8px); }
+  to { opacity: 1; transform: translateY(0); }
 }
 
 .secondary-category-menu::before {
@@ -445,6 +451,12 @@
   padding: 16px 12px max(12px, env(safe-area-inset-bottom));
   background: rgba(31, 18, 21, .48);
   backdrop-filter: blur(5px);
+  animation: category-overlay-enter .2s ease-out both;
+}
+
+@keyframes category-overlay-enter {
+  from { opacity: 0; }
+  to { opacity: 1; }
 }
 
 .mobile-category-drawer {
@@ -458,6 +470,12 @@
   border-radius: 24px 24px 0 0;
   background: var(--paper);
   box-shadow: 0 20px 64px rgba(31, 18, 21, .26);
+  animation: category-drawer-enter .26s cubic-bezier(.22, 1, .36, 1) both;
+}
+
+@keyframes category-drawer-enter {
+  from { opacity: .8; transform: translateY(28px); }
+  to { opacity: 1; transform: translateY(0); }
 }
 
 .mobile-category-drawer-handle {

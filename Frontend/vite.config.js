@@ -4,38 +4,77 @@ import { fileURLToPath } from 'node:url'
 import { defineConfig, loadEnv } from 'vite'
 import tailwindcss from '@tailwindcss/vite'
 
-function homepageHeroPreload() {
+function criticalHeroPreload() {
   const manifestPath = fileURLToPath(new URL('./src/utils/responsiveImageManifest.json', import.meta.url))
   const imageManifest = JSON.parse(readFileSync(manifestPath, 'utf8'))
-  const heroVariants = imageManifest['/homepage-images/showroom.png']?.avif || []
-  if (!heroVariants.length) throw new Error('Responsive showroom image variants are missing.')
-
-  const srcset = heroVariants.map(({ src, width }) => `${src} ${width}w`).join(', ')
-  const fallback = heroVariants.find(({ width }) => width >= 768) || heroVariants.at(-1)
-  const preloadScript = `<script>(()=>{if(location.pathname!=='/'&&location.pathname!=='/home')return;const l=document.createElement('link');l.rel='preload';l.as='image';l.type='image/avif';l.href='${fallback.src}';l.setAttribute('imagesrcset','${srcset}');l.setAttribute('imagesizes','(max-width: 600px) 200vw, 100vw');l.fetchPriority='high';document.head.append(l)})()</script>`
+  const criticalImages = [
+    { paths: ['/', '/home'], key: '/homepage-images/showroom.png', sizes: '100vw' },
+    {
+      paths: ['/product_hub'],
+      key: '/assets/saree girls image.jpg',
+      sizes: '(max-width: 600px) 100vw, (max-width: 900px) 55vw, 45vw',
+    },
+  ].map(({ paths, key, sizes }) => {
+    const variants = imageManifest[key]?.avif || []
+    if (!variants.length) throw new Error(`Responsive image variants are missing for ${key}.`)
+    const fallback = variants.find(({ width }) => width >= 768) || variants.at(-1)
+    return {
+      paths,
+      sizes,
+      src: fallback.src,
+      srcset: variants.map(({ src, width }) => `${src} ${width}w`).join(', '),
+    }
+  })
+  const preloadScript = `<script>(()=>{const image=${JSON.stringify(criticalImages)}.find(({paths})=>paths.includes(location.pathname));if(!image)return;const l=document.createElement('link');l.rel='preload';l.as='image';l.type='image/avif';l.href=image.src;l.setAttribute('imagesrcset',image.srcset);l.setAttribute('imagesizes',image.sizes);l.fetchPriority='high';document.head.append(l)})()</script>`
 
   return {
-    name: 'homepage-hero-preload',
+    name: 'critical-hero-preload',
     transformIndexHtml(html) {
+      const stylesheetLink = /<link\b(?=[^>]*\brel=["']stylesheet["'])[^>]*>/i
+      if (stylesheetLink.test(html)) {
+        return html.replace(stylesheetLink, `${preloadScript}$&`)
+      }
       return html.replace('</head>', `${preloadScript}</head>`)
     },
   }
 }
 
-function primaryFontPreload() {
+function criticalResourcePreload() {
   return {
-    name: 'primary-font-preload',
+    name: 'critical-resource-preload',
     enforce: 'post',
     generateBundle(_, bundle) {
-      const fontPath = Object.keys(bundle).find((fileName) => /(?:^|\/)dm-sans-latin-wght-normal-[^/]+\.woff2$/.test(fileName))
       const html = bundle['index.html']
-      if (!fontPath || !html || html.type !== 'asset') {
-        throw new Error('Production DM Sans font asset or HTML entry is missing.')
-      }
-      html.source = String(html.source).replace(
-        '</head>',
-        `<link rel="preload" href="/${fontPath}" as="font" type="font/woff2" crossorigin /></head>`,
+      const homePageChunk = Object.values(bundle).find((asset) =>
+        asset.type === 'chunk' &&
+        asset.facadeModuleId?.replaceAll('\\', '/').endsWith('/src/pages/HomePage.jsx')
       )
+      const fontPatterns = [
+        /(?:^|\/)dm-sans-latin-wght-normal-[^/]+\.woff2$/,
+        /(?:^|\/)lora-latin-wght-normal-[^/]+\.woff2$/,
+      ]
+      const fontPaths = fontPatterns.map((pattern) => Object.keys(bundle).find((fileName) => pattern.test(fileName)))
+      if (fontPaths.some((fontPath) => !fontPath) || !homePageChunk || !html || html.type !== 'asset') {
+        throw new Error('Production DM Sans/Lora font assets, homepage chunk, or HTML entry are missing.')
+      }
+      const homePageModules = new Set([homePageChunk.fileName])
+      const collectStaticImports = (chunk) => {
+        for (const fileName of chunk.imports) {
+          const dependency = bundle[fileName]
+          if (dependency?.type !== 'chunk' || homePageModules.has(fileName)) continue
+          homePageModules.add(fileName)
+          collectStaticImports(dependency)
+        }
+      }
+      collectStaticImports(homePageChunk)
+      const preloadLinks = fontPaths
+        .map((fontPath) => `<link rel="preload" href="/${fontPath}" as="font" type="font/woff2" crossorigin />`)
+        .join('')
+      const homePagePreload = `<script>(()=>{if(location.pathname!=='/'&&location.pathname!=='/home')return;for(const src of ${JSON.stringify([...homePageModules])}){const l=document.createElement('link');l.rel='modulepreload';l.href='/'+src;document.head.append(l)}})()</script>`
+      const stylesheetLink = /<link\b(?=[^>]*\brel=["']stylesheet["'])[^>]*>/i
+      html.source = String(html.source)
+        .replace(stylesheetLink, `${homePagePreload}$&`)
+        .replace('</head>', `${preloadLinks}</head>`)
     },
   }
 }
@@ -55,7 +94,7 @@ export default defineConfig(({ mode }) => {
   }
 
   return {
-    plugins: [homepageHeroPreload(), react(), tailwindcss(), primaryFontPreload()],
+    plugins: [criticalHeroPreload(), react(), tailwindcss(), criticalResourcePreload()],
     build: {
       sourcemap: true,
     },

@@ -28,6 +28,7 @@ import { useAuth } from '../auth/useAuth';
 import { ErrorState } from '../components/States';
 import { useWishlist } from '../wishlist/useWishlist';
 import { formatDate, formatPrice } from '../utils/format';
+import ResponsiveImage from '../components/ResponsiveImage';
 import accountHeroImage from '../assets/Regal Blush Saree in a Floral Arch.webp';
 import accountCampaignImage from '../assets/Opulent Indian Bridal Portrait.webp';
 import companyLogo from '../assets/Nishree Attire Navbar Logo.webp';
@@ -154,7 +155,18 @@ export default function AccountPage() {
   return (
     <main className="page-wrap account-dashboard">
       <section className="account-welcome-card" aria-labelledby="account-welcome-title">
-        <img className="account-welcome-art" src={accountHeroImage} alt="" aria-hidden="true" fetchPriority="high" />
+        <ResponsiveImage
+          className="account-welcome-art"
+          src={accountHeroImage}
+          responsiveKey="/assets/Regal Blush Saree in a Floral Arch.webp"
+          alt=""
+          aria-hidden="true"
+          fetchPriority="high"
+          decoding="async"
+          width="1672"
+          height="941"
+          sizes="(max-width: 600px) 100vw, (max-width: 1100px) 60vw, 45vw"
+        />
         <div className="account-welcome-art-shade" aria-hidden="true" />
         <span className="account-welcome-ornament" aria-hidden="true"><Sparkles size={17} /></span>
         <div className="account-welcome-copy">
@@ -237,7 +249,7 @@ export default function AccountPage() {
               return (
                 <article className="account-recent-order" key={order._id}>
                   <Link to={`/account/orders/${order._id}`} className="account-recent-image" aria-label={`View order ${order.orderNumber}`}>
-                    {firstItem?.image ? <img src={firstItem.image} alt="" loading="lazy" decoding="async" /> : <Package size={22} aria-hidden="true" />}
+                    {firstItem?.image ? <ResponsiveImage src={firstItem.image} alt="" loading="lazy" decoding="async" width="65" height="76" sizes="65px" /> : <Package size={22} aria-hidden="true" />}
                     {order.items?.length > 1 && <span>+{order.items.length - 1}</span>}
                   </Link>
                   <div className="account-recent-order-copy">
@@ -266,7 +278,17 @@ export default function AccountPage() {
       </section>
 
       <section className="account-promo-banner" aria-label="Discover the latest collection">
-        <img src={accountCampaignImage} alt="" aria-hidden="true" loading="lazy" decoding="async" />
+        <ResponsiveImage
+          src={accountCampaignImage}
+          responsiveKey="/assets/Opulent Indian Bridal Portrait.webp"
+          alt=""
+          aria-hidden="true"
+          loading="lazy"
+          decoding="async"
+          width="1812"
+          height="868"
+          sizes="(max-width: 600px) 100vw, 50vw"
+        />
         <div className="account-promo-overlay" aria-hidden="true" />
         <div className="account-promo-copy">
           <span><Sparkles size={13} aria-hidden="true" /> THE NISHREE EDIT</span>

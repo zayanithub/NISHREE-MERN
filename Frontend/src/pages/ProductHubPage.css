@@ -18,7 +18,7 @@
 .product-hub-page *::after { box-sizing: border-box; }
 .hub-page-shell { width: 100%; }
 .hub-inner { width: min(1480px, calc(100% - 104px)); margin-inline: auto; }
-.hub-kicker { display: block; color: #a47b36; font-size: 10px; font-weight: 800; letter-spacing: .19em; line-height: 1.5; text-transform: uppercase; }
+.hub-kicker { display: block; color: #806022; font-size: 10px; font-weight: 800; letter-spacing: .19em; line-height: 1.5; text-transform: uppercase; }
 .hub-preview-note { margin: 0 auto 25px; padding: 0 20px; color: #746760; font-size: 11px; letter-spacing: .035em; text-align: center; }
 
 .hub-hero {
@@ -40,7 +40,8 @@
 }
 .hub-hero-photo { position: relative; display: grid; min-height: 480px; place-items: center; overflow: hidden; }
 .hub-hero-photo::before { position: absolute; z-index: 1; width: min(86%, 450px); height: 91%; border: 8px solid #f1ce7b; border-radius: 48% 48% 13px 13px; box-shadow: inset 0 0 0 2px rgba(120, 54, 18, .35), 0 0 0 8px rgba(232, 198, 106, .14); content: ""; }
-.hub-hero-photo > img { position: absolute; width: 84%; height: 89%; border-radius: 47% 47% 7px 7px; object-fit: cover; object-position: center 34%; }
+.hub-hero-picture { display: contents; }
+.hub-hero-picture img { position: absolute; width: 84%; height: 89%; border-radius: 47% 47% 7px 7px; object-fit: cover; object-position: center 34%; }
 .hub-photo-arch { position: absolute; z-index: 2; top: 5%; left: 8%; width: 84%; height: 90%; border: 1px solid rgba(255, 244, 211, .68); border-radius: 48% 48% 12px 12px; pointer-events: none; }
 .hub-hero-seal { position: absolute; z-index: 3; right: 7%; bottom: 8%; display: grid; width: 94px; height: 94px; align-content: center; justify-items: center; border: 1px solid rgba(255, 240, 197, .8); border-radius: 50%; background: #b70725; color: #fff2d6; font-size: 8px; font-weight: 800; letter-spacing: .12em; line-height: 1.55; text-align: center; transform: rotate(9deg); }
 .hub-hero-seal svg { margin-bottom: 5px; color: #f5d17c; }

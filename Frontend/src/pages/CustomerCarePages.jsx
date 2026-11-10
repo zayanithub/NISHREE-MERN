@@ -9,6 +9,7 @@ import { customerApi } from '../api/customerApi';
 import { catalogApi } from '../api/catalogApi';
 import { normalizeApiError } from '../api/client';
 import { ErrorState, EmptyState, LoadingState } from '../components/States';
+import ResponsiveImage from '../components/ResponsiveImage';
 import { formatDate } from '../utils/format';
 import { useDialogFocus } from '../hooks/useDialogFocus';
 import { tamilNaduDistricts, indianStatesAndTerritories, countrySuggestions } from '../data/addressOptions';
@@ -243,6 +244,11 @@ export function ReturnExchangePage() {
   const [requests, setRequests] = useState([]);
   const [exchanges, setExchanges] = useState([]);
   const [products, setProducts] = useState([]);
+  const [productsLoading, setProductsLoading] = useState(false);
+  const [productsError, setProductsError] = useState('');
+  const productsLoadedRef = useRef(false);
+  const productsRequestRef = useRef(null);
+  const productsControllerRef = useRef(null);
   const [productVariants, setProductVariants] = useState([]);
   const [orderId, setOrderId] = useState(query.get('orderId') || '');
   const [orderItemId, setOrderItemId] = useState(query.get('orderItemId') || '');
@@ -277,17 +283,50 @@ export function ReturnExchangePage() {
 
   useEffect(() => () => {
     evidencePreviewUrls.current.forEach((url) => URL.revokeObjectURL(url));
+    const controller = productsControllerRef.current;
+    productsControllerRef.current = null;
+    productsRequestRef.current = null;
+    controller?.abort();
+  }, []);
+
+  const loadExchangeProducts = useCallback(() => {
+    if (productsLoadedRef.current) return Promise.resolve();
+    if (productsRequestRef.current) return productsRequestRef.current;
+
+    setProductsLoading(true);
+    setProductsError('');
+    const controller = new AbortController();
+    productsControllerRef.current = controller;
+    productsRequestRef.current = catalogApi.products({ page: 1, limit: 100, sort: 'newest' }, controller.signal)
+      .then((productData) => {
+        if (!controller.signal.aborted) {
+          setProducts(productData.products || []);
+          productsLoadedRef.current = true;
+        }
+      })
+      .catch((requestError) => {
+        if (!controller.signal.aborted) setProductsError(normalizeApiError(requestError).message);
+      })
+      .finally(() => {
+        if (productsControllerRef.current === controller) {
+          productsControllerRef.current = null;
+          productsRequestRef.current = null;
+          setProductsLoading(false);
+        }
+      });
+    return productsRequestRef.current;
   }, []);
 
   const load = useCallback(async () => {
     try {
-      const [orderData, returnData, exchangeData, productData] = await Promise.all([
-        customerApi.orders({ page: 1, limit: 100 }), customerApi.returns({ page: 1, limit: 50 }), customerApi.exchanges({ page: 1, limit: 50 }), catalogApi.products({ page: 1, limit: 100, sort: 'newest' }),
+      const [orderData, returnData, exchangeData] = await Promise.all([
+        customerApi.orders({ page: 1, limit: 100 }),
+        customerApi.returns({ page: 1, limit: 50 }),
+        customerApi.exchanges({ page: 1, limit: 50 }),
       ]);
       setOrders(orderData.orders || []);
       setRequests(returnData.requests || returnData.returnRequests || returnData.returns || returnData.items || []);
       setExchanges(exchangeData.requests || exchangeData.exchangeRequests || exchangeData.exchanges || exchangeData.items || []);
-      setProducts(productData.products || []);
       const firstDelivered = (orderData.orders || []).find((order) => order.orderStatus === 'delivered');
       const chosenOrderId = query.get('orderId') || firstDelivered?._id || '';
       setOrderId(chosenOrderId);
@@ -299,6 +338,12 @@ export function ReturnExchangePage() {
     finally { setLoading(false); }
   }, [query]);
   useEffect(() => { const timer = window.setTimeout(() => { void load(); }, 0); return () => window.clearTimeout(timer); }, [load]);
+
+  useEffect(() => {
+    if (type !== 'exchange') return undefined;
+    const timer = window.setTimeout(() => { void loadExchangeProducts(); }, 0);
+    return () => window.clearTimeout(timer);
+  }, [type, loadExchangeProducts]);
 
   useEffect(() => {
     if (type !== 'exchange' || !requestedProductId) return undefined;
@@ -450,7 +495,7 @@ export function ReturnExchangePage() {
         <div className="returns-section-heading"><div><span className="eyebrow">Your recent deliveries</span><h2 id="eligible-orders-title">Eligible orders</h2><p>Requests are available for seven days after delivery. The store confirms eligibility when you submit.</p></div><span className="returns-count">{orderItems.filter((entry) => entry.isEligible).length} eligible item{orderItems.filter((entry) => entry.isEligible).length === 1 ? '' : 's'}</span></div>
         {orderItems.length ? <div className="returns-order-grid">{orderItems.map(({ key, order, item, deadline, isEligible }) => <article className="returns-order-card" key={key}>
           <div className="returns-order-product">
-            {item.image ? <img src={item.image} alt="" loading="lazy" /> : <span className="returns-order-image-placeholder"><PackageCheck size={24} aria-hidden="true" /></span>}
+            {item.image ? <ResponsiveImage pictureClassName="returns-order-image" src={item.image} alt="" loading="lazy" decoding="async" width="76" height="90" sizes="76px" /> : <span className="returns-order-image-placeholder"><PackageCheck size={24} aria-hidden="true" /></span>}
             <div><span className="eyebrow">{order.orderNumber || 'Order'} · {String(order._id).slice(-8).toUpperCase()}</span><h3>{item.productName}</h3>{item.variantName && <p>{item.variantName}</p>}</div>
           </div>
           <div className="returns-order-meta">
@@ -475,7 +520,8 @@ export function ReturnExchangePage() {
           </div>
           {selectedItem && <div className="form-two-columns"><label>Quantity to {type === 'return' ? 'return' : 'exchange'}<input type="number" min="1" max={selectedItem.quantity} value={quantity} onChange={(event) => setQuantity(Math.max(1, Math.min(selectedItem.quantity, Number(event.target.value) || 1)))} required /></label><p className="returns-selected-note">Selected item: <strong>{selectedItem.productName}</strong>{selectedOrder?.orderNumber && <span> · {selectedOrder.orderNumber}</span>}</p></div>}
           {type === 'exchange' && <>
-            <label>Replacement product<select required value={requestedProductId} onChange={(event) => { setRequestedProductId(event.target.value); setRequestedVariantId(''); }}><option value="">Choose from the available collection</option>{products.map((product) => <option value={product._id} key={product._id}>{product.name}</option>)}</select></label>
+            <label>Replacement product<select required value={requestedProductId} disabled={productsLoading || Boolean(productsError)} onChange={(event) => { setRequestedProductId(event.target.value); setRequestedVariantId(''); }}><option value="">{productsLoading ? 'Loading the available collection…' : 'Choose from the available collection'}</option>{products.map((product) => <option value={product._id} key={product._id}>{product.name}</option>)}</select></label>
+            {productsError && <p className="field-error" role="alert">Replacement pieces could not be loaded. <button type="button" className="text-link" onClick={() => void loadExchangeProducts()}>Try again</button> {productsError}</p>}
             {variantProductId === String(requestedProductId) && productVariants.length > 0 && <label>Available colour / size / option<select required value={requestedVariantId} onChange={(event) => setRequestedVariantId(event.target.value)}><option value="">Choose an available option</option>{productVariants.map((variant) => <option key={variant._id} value={variant._id}>{variant.name}{variant.color ? ` · ${variant.color}` : ''}{variant.blouseOption ? ` · ${titleCase(variant.blouseOption)}` : ''}</option>)}</select></label>}
           </>}
           <label>{type === 'return' ? 'Return reason' : 'Exchange reason'}<select required value={reason} onChange={(event) => setReason(event.target.value)}><option value="">Choose a reason</option>{(type === 'return' ? returnReasons : exchangeReasons).map((item) => <option value={item} key={item}>{titleCase(item)}</option>)}</select></label>

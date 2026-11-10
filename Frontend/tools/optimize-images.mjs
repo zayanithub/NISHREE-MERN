@@ -7,10 +7,31 @@ import sharp from 'sharp';
 const frontendRoot = fileURLToPath(new URL('../', import.meta.url));
 const images = [
   {
+    key: '/assets/saree girls image.jpg',
+    input: 'src/assets/saree girls image.jpg',
+    name: 'product-hub/hero',
+    widths: [320, 480, 640, 768, 1024],
+  },
+  {
+    key: '/assets/Regal Blush Saree in a Floral Arch.webp',
+    input: 'src/assets/Regal Blush Saree in a Floral Arch.webp',
+    name: 'account/dashboard-hero',
+    widths: [320, 480, 640, 768, 1024, 1280, 1440],
+    avifQuality: 52,
+  },
+  {
+    key: '/assets/Opulent Indian Bridal Portrait.webp',
+    input: 'src/assets/Opulent Indian Bridal Portrait.webp',
+    name: 'account/campaign',
+    widths: [320, 480, 640, 768, 1024, 1280],
+    avifQuality: 52,
+  },
+  {
     key: '/homepage-images/showroom.png',
     input: 'public/homepage-images/showroom.png',
     name: 'homepage/showroom',
     widths: [480, 768, 1024, 1280, 1440, 1600],
+    avifQuality: 46,
   },
   ...[
     'celestial-mandala',
@@ -29,7 +50,7 @@ const images = [
     key: '/assets/Nishree Attire Navbar Logo.png',
     input: 'src/assets/Nishree Attire Navbar Logo.png',
     name: 'brand/navbar-logo',
-    widths: [64, 72, 84, 126, 144, 168, 216, 252],
+    widths: [64, 72, 84, 126, 144, 168, 180, 216, 252],
     logo: true,
   },
   ...[
@@ -70,7 +91,7 @@ for (const image of images) {
 
     for (const format of ['avif', 'webp']) {
       const buffer = format === 'avif'
-        ? await resized.clone().avif({ quality: image.logo ? 78 : 56, effort: 6 }).toBuffer()
+        ? await resized.clone().avif({ quality: image.logo ? 72 : image.avifQuality || 56, effort: 6 }).toBuffer()
         : await resized.clone().webp({ quality: image.logo ? 90 : 82, effort: 5 }).toBuffer();
       const contentHash = createHash('sha256').update(buffer).digest('hex').slice(0, 8);
       const fileName = `${path.basename(image.name)}-${width}-${contentHash}.${format}`;

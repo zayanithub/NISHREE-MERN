@@ -1081,3 +1081,99 @@ html[data-theme="dark"] .account-route-content .notification-item.is-unread {
     transition: none !important;
   }
 }
+
+.account-dashboard-mobilebar,
+.account-dashboard-scrim {
+  display: none;
+}
+
+.account-dashboard-menu-toggle {
+  min-height: 44px;
+  display: inline-flex;
+  align-items: center;
+  gap: 9px;
+  padding: 0 13px;
+  border: 1px solid #e8d9cb;
+  border-radius: 9px;
+  background: #fffdf9;
+  color: #4a101c;
+  font: inherit;
+  font-size: 11px;
+  font-weight: 700;
+}
+
+.account-dashboard-menu-toggle:focus-visible {
+  outline: 2px solid #b68b56;
+  outline-offset: 3px;
+}
+
+@media (max-width: 900px) {
+  .account-route-page .account-dashboard-mobilebar {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-bottom: 15px;
+  }
+
+  .account-dashboard-mobile-title {
+    color: #997954;
+    font-size: 9px;
+    font-weight: 750;
+    letter-spacing: .18em;
+  }
+
+  .account-route-page .account-dashboard-scrim {
+    position: fixed;
+    z-index: 109;
+    inset: 0;
+    display: block;
+    border: 0;
+    background: rgba(26, 12, 14, .46);
+  }
+
+  .account-route-page .account-route-sidebar.is-mobile-sidebar {
+    position: fixed;
+    z-index: 110;
+    top: max(112px, env(safe-area-inset-top));
+    right: auto;
+    bottom: max(14px, env(safe-area-inset-bottom));
+    left: 14px;
+    width: min(315px, calc(100vw - 28px));
+    max-height: none;
+    min-height: 0;
+    overflow-y: auto;
+    overscroll-behavior: contain;
+    padding: 18px 15px;
+    visibility: hidden;
+    transform: translateX(calc(-100% - 30px));
+    transition: transform .25s ease, visibility .25s ease;
+  }
+
+  .account-route-page.is-dashboard-page .account-route-layout {
+    display: block;
+  }
+
+  .account-route-page:not(.is-dashboard-page) .account-route-sidebar.is-mobile-sidebar {
+    display: flex;
+    flex-direction: column;
+    border-radius: 14px;
+    background: #fffdf9;
+    box-shadow: 0 16px 42px rgba(67, 25, 30, .16);
+  }
+
+  .account-route-page.is-dashboard-page .account-route-sidebar.is-mobile-sidebar {
+    position: fixed;
+    top: max(112px, env(safe-area-inset-top));
+  }
+
+  .account-route-page .account-route-sidebar.is-mobile-sidebar.is-open {
+    visibility: visible;
+    transform: translateX(0);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .account-route-page .account-route-sidebar.is-mobile-sidebar {
+    transition: none;
+  }
+}
